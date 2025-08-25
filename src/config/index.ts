@@ -28,12 +28,21 @@ export const defaultConfig: Config = {
   domain: 'meet.jit.si'
 };
 
-// Load configuration - imports config.json at build time
+// Load configuration from webserver (supports runtime config.json)
 export async function loadConfig(): Promise<Config> {
   try {
-    // Import config.json at build time
-    const configModule = await import('../../config.json');
-    const configData = configModule.default;
+    // Load configuration from config.json served by webserver
+    const response = await fetch('/config.json?t=' + Date.now());
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.warn('Configuration not found, using default config');
+        return defaultConfig;
+      }
+      throw new Error(`Failed to load configuration: ${response.status} ${response.statusText}`);
+    }
+    
+    const configData = await response.json();
     
     // Use the first preset as the active configuration, fallback to direct config
     const loadedConfig = configData.presets?.[0] || configData;
@@ -50,7 +59,7 @@ export async function loadConfig(): Promise<Config> {
       delete loadedConfig.webhooksProxy;
     }
     
-    console.log('✅ Configuration loaded from build-time config.json:', loadedConfig.name || 'Default');
+    console.log('✅ Configuration loaded from config.json:', loadedConfig.name || 'Default');
     return { ...loadedConfig, presets: configData.presets } as Config;
     
   } catch (error) {

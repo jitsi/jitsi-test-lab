@@ -1,0 +1,11 @@
+services:
+  jitsi-test-lab:
+    build: .
+    ports:
+      - "3000:80"
+    volumes:
+      # Mount custom config.json to override the default
+      - ./config.json:/usr/share/nginx/html/config.json:ro
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped

@@ -11,10 +11,9 @@ To build a package use `npm run build`.
 
 # Configuration
 The aplication comes with a default `config.json` file, which can be used to
-provide a configuration preset. See `config.example.json` for the format and
-supported fields. **Note that this file is exposed publically by design, 
-don't include private information (e.g. keys) unless you intend to make
-them available to users of the app**.
+provide a configuration preset. **Note that this file is exposed publically 
+by design, don't include private information (e.g. keys) unless you intend to
+make them available to users of the app**.
 
 Users are also able to configure the environment in their browsers, which
 stores the configuration in local storate.
@@ -22,7 +21,7 @@ stores the configuration in local storate.
 # JaaS configuration
 To integrate with JaaS and be able to generate tokens for testing, you'll need
 to provive your JaaS tenant (vpaas-magic-cookie-abcd) and private key. **This should
-only be used with an account for testing an a separate key**. See the JaaS 
+only be used with an account for testing and a separate key**. See the JaaS 
 documentation on how to generate and upload a key to your JaaS account.
 https://developer.8x8.com/jaas/docs/api-keys-generate-add
 
