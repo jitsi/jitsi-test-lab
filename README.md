@@ -10,7 +10,7 @@ To run in development mode use `npm run dev`.
 To build a package use `npm run build`.
 
 # Configuration
-The aplication comes with a default `config.json` file, which can be used to
+The aplication comes with a default `public/config.json` file, which can be used to
 provide a configuration preset. **Note that this file is exposed publically 
 by design, don't include private information (e.g. keys) unless you intend to
 make them available to users of the app**.

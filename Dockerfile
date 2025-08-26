@@ -21,8 +21,8 @@ from nginx:alpine
 # Copy built files to nginx
 copy --from=build /app/dist /usr/share/nginx/html
 
-# Copy default config.json to web directory
-copy --from=build /app/config.json /usr/share/nginx/html/config.json
+# Copy default config.json to web directory (already copied with dist files)
+# Config is now in public/ and gets included in dist/ automatically by Vite
 
 # Create custom nginx config to handle SPA routing
 run echo 'server {\

@@ -37,7 +37,7 @@ import {
   CloudQueue,
   ControlCamera
 } from '@mui/icons-material'
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+// Removed React Router imports to prevent URL changes
 import type { Config } from './config/index';
 import { loadConfig } from './config/index';
 import WebhookProxy from './WebhookProxy'
@@ -108,16 +108,18 @@ function Sidebar({
   configPanelOpen, 
   setConfigPanelOpen, 
   selectedConfigPage, 
-  setSelectedConfigPage 
+  setSelectedConfigPage,
+  navigate,
+  location
 }: {
   configPanelOpen: boolean;
   setConfigPanelOpen: (open: boolean) => void;
   selectedConfigPage: string | null;
   setSelectedConfigPage: (page: string | null) => void;
+  navigate: (path: string) => void;
+  location: { pathname: string };
 }) {
   console.log('Sidebar: Component rendering')
-  const navigate = useNavigate()
-  const location = useLocation()
   const { getCurrentProxy, config } = useAppContext()
   const { tabs, activeTabId, setActiveTab, closeTab, closeAllTabs, layoutMode, setLayoutMode, selectedTabIds, setSelectedTabIds, useTabColors, setUseTabColors } = useTabsContext()
   const [proxyStatus, setProxyStatus] = useState<string>('disconnected')
@@ -591,13 +593,14 @@ function ConfigPanel({
 
 function MainContent({ 
   configPanelOpen, 
-  selectedConfigPage 
+  selectedConfigPage,
+  location
 }: { 
   configPanelOpen: boolean; 
-  selectedConfigPage: string | null; 
+  selectedConfigPage: string | null;
+  location: { pathname: string };
 }) {
   console.log('MainContent: Component rendering')
-  const location = useLocation()
   const { tabs, activeTabId, layoutMode, selectedTabIds, useTabColors } = useTabsContext()
   console.log('MainContent: Current location:', location.pathname)
   
@@ -759,16 +762,20 @@ function MainContent({
           overflow: 'auto',
           p: 3
         }}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/tabs" replace />} />
-            <Route path="/environment-config" element={<JaaSConfigPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/webhooks" element={<WebhooksPage />} />
-            <Route path="/participants" element={<TokensPage />} />
-            <Route path="/iframe-control" element={<IFrameControlPage />} />
-            <Route path="/tabs" element={<TabsPage />} />
-            <Route path="/diagnostics" element={<DiagnosticPage />} />
-          </Routes>
+          {/* Render component based on current page */}
+          {(() => {
+            switch (location.pathname) {
+              case '/environment-config': return <JaaSConfigPage />
+              case '/settings': return <SettingsPage />
+              case '/webhooks': return <WebhooksPage />
+              case '/participants': return <TokensPage />
+              case '/iframe-control': return <IFrameControlPage />
+              case '/diagnostics': return <DiagnosticPage />
+              case '/tabs':
+              default:
+                return <TabsPage />
+            }
+          })()}
         </Box>
       )}
     </Box>
@@ -1059,7 +1066,11 @@ function AppProvider({ children }: { children: React.ReactNode }) {
 }
 
 function AppLayout() {
-  const location = useLocation()
+  // Internal navigation state
+  const [currentPage, setCurrentPage] = useState<string>('/tabs')
+  const location = { pathname: currentPage }
+  const navigate = (path: string) => setCurrentPage(path)
+  
   const isTabsPage = location.pathname === '/tabs'
   const [configPanelOpen, setConfigPanelOpen] = useState(false)
   const [selectedConfigPage, setSelectedConfigPage] = useState<string | null>(null)
@@ -1099,6 +1110,8 @@ function AppLayout() {
         setConfigPanelOpen={setConfigPanelOpen}
         selectedConfigPage={selectedConfigPage}
         setSelectedConfigPage={setSelectedConfigPage}
+        navigate={navigate}
+        location={location}
       />
       
       {/* Middle Panel - Collapsible Config Pages */}
@@ -1125,6 +1138,7 @@ function AppLayout() {
         <MainContent 
           configPanelOpen={configPanelOpen}
           selectedConfigPage={selectedConfigPage}
+          location={location}
         />
       </Box>
     </Box>
@@ -1136,9 +1150,7 @@ function App() {
   return (
     <AppProvider>
       <TabsProvider>
-        <Router>
-          <AppLayout />
-        </Router>
+        <AppLayout />
       </TabsProvider>
     </AppProvider>
   )

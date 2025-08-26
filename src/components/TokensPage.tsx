@@ -26,7 +26,7 @@ import {
     DialogActions
 } from '@mui/material';
 import { ContentCopy as CopyIcon, Link as LinkIcon, Tab as TabIcon, PlayArrow as SwitchIcon, SkipNext as SkipIcon, OpenInNew as OpenInNewIcon, ExpandMore, Add as AddIcon, Remove as RemoveIcon, Launch as QuickJoinIcon } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+// Removed useNavigate import - navigation handled by parent
 import { useAppContext } from '../App';
 import { useTabsContext } from '../contexts/TabsContext';
 import { generateJwt, generateConferenceLink, generatePayload } from '../utils/tokenGenerator';
@@ -49,7 +49,7 @@ export function TokensPage() {
         visitor, setVisitor
     } = useAppContext();
     const { addTab, addTabBackground, setActiveTab } = useTabsContext();
-    const navigate = useNavigate();
+    // const navigate = useNavigate(); // Removed - no navigation needed
     const [generatedJwt, setGeneratedJwt] = useState<string>('');
     const [error, setError] = useState<string>('');
     const [copySuccess, setCopySuccess] = useState<string>('');
@@ -281,7 +281,7 @@ export function TokensPage() {
         });
         
         // Navigate to tabs page to show the new tab
-        navigate('/tabs');
+        // Navigation removed - staying on same URL
         setCopySuccess('Tab opened!');
     };
 
@@ -313,7 +313,7 @@ export function TokensPage() {
         });
         
         // Navigate to tabs page to show the new tab
-        navigate('/tabs');
+        // Navigation removed - staying on same URL
         setCopySuccess('Tab opened!');
     };
 
@@ -383,7 +383,7 @@ export function TokensPage() {
             configOverrides: quickJoinOverrides
         });
         
-        navigate('/tabs');
+        // Navigation removed - staying on same URL
         setCopySuccess('Quick join tab opened!');
         setQuickJoinDialogOpen(false);
     };
