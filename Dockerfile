@@ -1,7 +1,10 @@
 # Build stage
-from node:18-alpine as build
+from node:20-alpine as build
 
 workdir /app
+
+# Update npm to latest version
+run npm install -g npm@latest
 
 # Copy package files
 copy package*.json ./
