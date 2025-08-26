@@ -194,7 +194,7 @@ function Sidebar({
         <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <img 
-              src="/science-beaker.png" 
+              src="./science-beaker.png" 
               alt="Jitsi Test Lab" 
               style={{ width: 24, height: 24 }}
             />

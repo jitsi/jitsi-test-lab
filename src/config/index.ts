@@ -32,7 +32,7 @@ export const defaultConfig: Config = {
 export async function loadConfig(): Promise<Config> {
   try {
     // Load configuration from config.json served by webserver
-    const response = await fetch('/config.json?t=' + Date.now());
+    const response = await fetch('./config.json?t=' + Date.now());
     
     if (!response.ok) {
       if (response.status === 404) {
