@@ -38,6 +38,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          VITE_BASE_PATH: /jitsi-test-lab/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
