@@ -4,6 +4,8 @@ export interface Config {
   tenant?: string;
   kid?: string;
   privateKey?: string;
+  jwtAlgorithm?: 'RS256' | 'HS256';
+  jwtSecret?: string;
   webhooksProxy?: {
     url: string;
     sharedSecret: string;
@@ -17,6 +19,8 @@ export interface ConfigPreset {
   tenant?: string;
   kid?: string;
   privateKey?: string;
+  jwtAlgorithm?: 'RS256' | 'HS256';
+  jwtSecret?: string;
   webhooksProxy?: {
     url: string;
     sharedSecret: string;

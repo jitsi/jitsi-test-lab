@@ -12,9 +12,17 @@ export interface TokenOptions {
      */
     keyId: string;
     /**
-     * The private key content (not path) used to sign the token.
+     * The private key content (not path) used to sign the token (for RS256).
      */
-    privateKey: string;
+    privateKey?: string;
+    /**
+     * The JWT algorithm to use. Defaults to 'RS256'.
+     */
+    jwtAlgorithm?: 'RS256' | 'HS256';
+    /**
+     * The shared secret to use for HS256 signing.
+     */
+    jwtSecret?: string;
     /**
      * Whether to set the 'moderator' flag.
      */
@@ -94,10 +102,13 @@ export function generatePayload(options: TokenOptions): any {
         });
     }
 
+    // For HS256, use the tenant as sub if keyId doesn't have a slash
+    const sub = options.sub || (options.keyId.indexOf('/') > 0 ? options.keyId.substring(0, options.keyId.indexOf('/')) : options.keyId);
+
     const payload = {
         'aud': 'jitsi',
         'iss': 'chat',
-        'sub': options.sub || options.keyId.substring(0, options.keyId.indexOf('/')),
+        'sub': sub,
         'exp': parseExpiration(options.exp || '24h'),
         'context': {
             'user': {
@@ -139,59 +150,83 @@ export async function generateToken(options: TokenOptions): Promise<Token> {
         throw new Error('No keyId provided');
     }
 
-    if (!options.privateKey) {
-        throw new Error('No private key provided');
+    const algorithm = options.jwtAlgorithm || 'RS256';
+
+    // Validate required fields based on algorithm
+    if (algorithm === 'RS256' && !options.privateKey) {
+        throw new Error('No private key provided for RS256 algorithm');
+    }
+    if (algorithm === 'HS256' && !options.jwtSecret) {
+        throw new Error('No shared secret provided for HS256 algorithm');
     }
 
     const payload = generatePayload({
         ...options,
         displayName: options.displayName || '',
-        sub: options.sub || options.keyId.substring(0, options.keyId.indexOf('/'))
+        sub: options.sub || (options.keyId.indexOf('/') > 0 ? options.keyId.substring(0, options.keyId.indexOf('/')) : options.keyId)
     });
 
     try {
-        console.log('Private key format check:', {
-            hasBeginMarker: options.privateKey.includes('-----BEGIN PRIVATE KEY-----'),
-            hasRSAMarker: options.privateKey.includes('-----BEGIN RSA PRIVATE KEY-----'),
-            keyLength: options.privateKey.length,
-            keyStart: options.privateKey.substring(0, 100),
-            keyEnd: options.privateKey.substring(options.privateKey.length - 50)
-        });
-        
-        // Fix escaped newlines in private key (common when stored in JSON)
-        const formattedPrivateKey = options.privateKey.replace(/\\n/g, '\n');
-        
-        console.log('After newline fix:', {
-            keyLength: formattedPrivateKey.length,
-            keyStart: formattedPrivateKey.substring(0, 100),
-            keyEnd: formattedPrivateKey.substring(formattedPrivateKey.length - 50),
-            hasProperEnd: formattedPrivateKey.includes('-----END PRIVATE KEY-----')
-        });
-        
-        // Handle RSA format keys by giving a clear error message
-        if (formattedPrivateKey.includes('-----BEGIN RSA PRIVATE KEY-----')) {
-            throw new Error(`Private key is in RSA format but PKCS#8 format is required. Please convert your RSA private key to PKCS#8 format using: openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in your_rsa_key.pem | awk '{printf "%s\\\\n", $0}' and update the config.json file.`);
+        let jwt: string;
+
+        if (algorithm === 'HS256') {
+            // Use shared secret for HS256
+            console.log('Using HS256 algorithm with shared secret');
+            const secret = new TextEncoder().encode(options.jwtSecret);
+
+            jwt = await new SignJWT(payload)
+                .setProtectedHeader({
+                    alg: 'HS256',
+                    typ: 'JWT'
+                })
+                .setIssuedAt()
+                .setExpirationTime(payload.exp)
+                .sign(secret);
+        } else {
+            // Use private key for RS256
+            console.log('Private key format check:', {
+                hasBeginMarker: options.privateKey!.includes('-----BEGIN PRIVATE KEY-----'),
+                hasRSAMarker: options.privateKey!.includes('-----BEGIN RSA PRIVATE KEY-----'),
+                keyLength: options.privateKey!.length,
+                keyStart: options.privateKey!.substring(0, 100),
+                keyEnd: options.privateKey!.substring(options.privateKey!.length - 50)
+            });
+
+            // Fix escaped newlines in private key (common when stored in JSON)
+            const formattedPrivateKey = options.privateKey!.replace(/\\n/g, '\n');
+
+            console.log('After newline fix:', {
+                keyLength: formattedPrivateKey.length,
+                keyStart: formattedPrivateKey.substring(0, 100),
+                keyEnd: formattedPrivateKey.substring(formattedPrivateKey.length - 50),
+                hasProperEnd: formattedPrivateKey.includes('-----END PRIVATE KEY-----')
+            });
+
+            // Handle RSA format keys by giving a clear error message
+            if (formattedPrivateKey.includes('-----BEGIN RSA PRIVATE KEY-----')) {
+                throw new Error(`Private key is in RSA format but PKCS#8 format is required. Please convert your RSA private key to PKCS#8 format using: openssl pkcs8 -topk8 -inform PEM -outform PEM -nocrypt -in your_rsa_key.pem | awk '{printf "%s\\\\n", $0}' and update the config.json file.`);
+            }
+
+            // Import PKCS#8 format key
+            console.log('Using PKCS#8 format key');
+            const privateKey = await importPKCS8(formattedPrivateKey, 'RS256');
+
+            // Create and sign the JWT
+            jwt = await new SignJWT(payload)
+                .setProtectedHeader({
+                    alg: 'RS256',
+                    typ: 'JWT',
+                    kid: options.keyId
+                })
+                .setIssuedAt()
+                .setExpirationTime(payload.exp)
+                .sign(privateKey);
         }
-        
-        // Import PKCS#8 format key
-        console.log('Using PKCS#8 format key');
-        const privateKey = await importPKCS8(formattedPrivateKey, 'RS256');
-        
-        // Create and sign the JWT
-        const jwt = await new SignJWT(payload)
-            .setProtectedHeader({ 
-                alg: 'RS256', 
-                typ: 'JWT',
-                kid: options.keyId 
-            })
-            .setIssuedAt()
-            .setExpirationTime(payload.exp)
-            .sign(privateKey);
 
         const headers = {
-            algorithm: 'RS256' as const,
+            algorithm: algorithm,
             typ: 'JWT',
-            keyid: options.keyId,
+            keyid: algorithm === 'RS256' ? options.keyId : undefined,
         };
 
         return {
