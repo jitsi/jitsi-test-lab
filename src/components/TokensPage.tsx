@@ -97,7 +97,8 @@ export function TokensPage() {
         'list-visitors': false,
         'send-groupchat': false,
         'create-polls': false,
-        'hidden-from-recorder': false
+        'hidden-from-recorder': false,
+        'name-readonly': false
     });
     
     const handlePermissionChange = (permission: string, checked: boolean) => {
@@ -704,6 +705,18 @@ export function TokensPage() {
                                                         />
                                                     }
                                                     label="Hidden from Recorder"
+                                                />
+                                            </Tooltip>
+                                            <Tooltip title="User cannot change their display name">
+                                                <FormControlLabel
+                                                    control={
+                                                        <Checkbox
+                                                            size="small"
+                                                            checked={permissions['name-readonly']}
+                                                            onChange={(e) => handlePermissionChange('name-readonly', e.target.checked)}
+                                                        />
+                                                    }
+                                                    label="Name Readonly"
                                                 />
                                             </Tooltip>
                                         </Box>
