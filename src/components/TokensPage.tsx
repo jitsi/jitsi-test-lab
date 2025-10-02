@@ -140,11 +140,15 @@ export function TokensPage() {
     };
 
     // Create tokenOptions object from context state
+    // For HS256, use tenant as keyId; for RS256 (JaaS), use kid
+    const algorithm = config?.jwtAlgorithm || 'RS256';
     const tokenOptions: TokenOptions = {
         displayName,
         exp: expiration,
-        keyId: config?.kid || '',
-        privateKey: config?.privateKey || '',
+        keyId: algorithm === 'HS256' ? (config?.tenant || '') : (config?.kid || ''),
+        privateKey: config?.privateKey,
+        jwtAlgorithm: algorithm,
+        jwtSecret: config?.jwtSecret,
         moderator,
         room: currentConference || '*',
         visitor,
@@ -172,9 +176,16 @@ export function TokensPage() {
             setGeneratedJwt('');
             return;
         }
-        
+
         const generateTokenAsync = async () => {
-            if (tokenOptions.keyId && tokenOptions.privateKey) {
+            const algorithm = config?.jwtAlgorithm || 'RS256';
+            // For HS256: need tenant and jwtSecret
+            // For RS256 (JaaS): need kid and privateKey
+            const hasRequiredAuth = algorithm === 'HS256'
+                ? (config?.tenant && config?.jwtSecret)
+                : (config?.kid && config?.privateKey);
+
+            if (hasRequiredAuth) {
                 try {
                     const jwt = await generateJwt(tokenOptions);
                     setGeneratedJwt(jwt);
@@ -188,9 +199,9 @@ export function TokensPage() {
                 setGeneratedJwt('');
             }
         };
-        
+
         generateTokenAsync();
-    }, [tokenMode, displayName, expiration, config?.kid, config?.privateKey, moderator, currentConference, visitor, permissions]);
+    }, [tokenMode, displayName, expiration, config?.kid, config?.tenant, config?.privateKey, config?.jwtSecret, config?.jwtAlgorithm, moderator, currentConference, visitor, permissions]);
 
 
     const copyToClipboard = async (text: string, successMessage: string) => {
@@ -420,19 +431,25 @@ export function TokensPage() {
                                 }
                             }}
                         >
-                            <ToggleButton value="generate" disabled={!config?.kid || !config?.privateKey}>
+                            <ToggleButton value="generate" disabled={
+                                (config?.jwtAlgorithm === 'HS256' && (!config?.tenant || !config?.jwtSecret)) ||
+                                ((config?.jwtAlgorithm || 'RS256') === 'RS256' && (!config?.kid || !config?.privateKey))
+                            }>
                                 Generate Token
-                                {(!config?.kid || !config?.privateKey) && ' (No Auth Config)'}
+                                {((config?.jwtAlgorithm === 'HS256' && (!config?.tenant || !config?.jwtSecret)) ||
+                                  ((config?.jwtAlgorithm || 'RS256') === 'RS256' && (!config?.kid || !config?.privateKey))) && ' (No Auth Config)'}
                             </ToggleButton>
                             <ToggleButton value="none">No Token</ToggleButton>
                             <ToggleButton value="external">External Token</ToggleButton>
                         </ToggleButtonGroup>
                     </Box>
                     
-                    {(!config?.kid || !config?.privateKey) && (
+                    {((config?.jwtAlgorithm === 'HS256' && (!config?.tenant || !config?.jwtSecret)) ||
+                      ((config?.jwtAlgorithm || 'RS256') === 'RS256' && (!config?.kid || !config?.privateKey))) && (
                         <Alert severity="info" sx={{ mb: 2 }}>
-                            No authentication configuration found. The app will use public Jitsi Meet mode without JWT tokens. 
-                            To use JaaS authentication, configure the Key ID and Private Key in Environment Config.
+                            {config?.jwtAlgorithm === 'HS256'
+                                ? 'HS256 authentication requires Domain, Tenant, and Shared Secret. Configure these in Environment Config.'
+                                : 'JaaS authentication requires Domain, Key ID, and Private Key. Configure these in Environment Config, or switch to HS256 authentication.'}
                         </Alert>
                     )}
                     

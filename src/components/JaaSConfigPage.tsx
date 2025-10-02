@@ -25,6 +25,8 @@ interface JaaSPreset {
     tenant: string;
     kid: string;
     privateKey: string;
+    jwtAlgorithm?: 'RS256' | 'HS256';
+    jwtSecret?: string;
     webhooksProxy: {
         url: string;
         sharedSecret: string;
@@ -176,14 +178,14 @@ export function JaaSConfigPage() {
         const baseName = 'New Configuration';
         let configName = baseName;
         let counter = 1;
-        
+
         // Check if name already exists and add suffix if needed
-        while (customConfigs.some(config => config.name === configName) || 
+        while (customConfigs.some(config => config.name === configName) ||
                presets.some(preset => preset.name === configName)) {
             configName = `${baseName} ${counter}`;
             counter++;
         }
-        
+
         const newConfig: CustomConfig = {
             id: Date.now().toString(),
             name: configName,
@@ -192,12 +194,14 @@ export function JaaSConfigPage() {
             tenant: '',
             kid: '',
             privateKey: '',
+            jwtAlgorithm: 'RS256',
+            jwtSecret: '',
             webhooksProxy: {
                 url: '',
                 sharedSecret: ''
             }
         };
-        
+
         const updatedConfigs = [...customConfigs, newConfig];
         saveCustomConfigs(updatedConfigs);
         updateSelectedPreset(newConfig.id);
@@ -324,72 +328,98 @@ export function JaaSConfigPage() {
                                         />
                                         
                                         <TextField
-                                            label="Tenant (Optional)"
+                                            label={displayConfig.jwtAlgorithm === 'HS256' ? 'Tenant (Required for HS256)' : 'Tenant (Optional)'}
                                             value={displayConfig.tenant || ''}
                                             onChange={(e) => setEditingConfig(prev => ({ ...prev, tenant: e.target.value }))}
                                             disabled={!isCustomConfig}
                                             fullWidth
-                                            placeholder="Leave empty for public Jitsi Meet"
+                                            placeholder={displayConfig.jwtAlgorithm === 'HS256' ? 'e.g., my-tenant-name' : 'Leave empty for public Jitsi Meet'}
                                         />
                                     </Stack>
                                 </Box>
                                 
-                                {/* JaaS Section */}
+                                {/* Authentication Section */}
                                 <Box>
                                     <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
-                                        JaaS
+                                        Authentication
                                     </Typography>
                                     <Stack spacing={2}>
-                                        <TextField
-                                            label="Key ID (Optional)"
-                                            value={displayConfig.kid || ''}
-                                            onChange={(e) => setEditingConfig(prev => ({ ...prev, kid: e.target.value }))}
-                                            disabled={!isCustomConfig}
-                                            fullWidth
-                                            placeholder="Leave empty for anonymous access"
-                                        />
-                                        
-                                        <TextField
-                                            label="Private Key (Optional)"
-                                            value={isCustomConfig && editingConfig.privateKey ? editingConfig.privateKey : (displayConfig.privateKey ? '••••••••' : '')}
-                                            onChange={(e) => setEditingConfig(prev => ({ ...prev, privateKey: e.target.value }))}
-                                            disabled={!isCustomConfig}
-                                            multiline
-                                            rows={4}
-                                            fullWidth
-                                            placeholder={isCustomConfig ? 'Enter private key for JaaS authentication...' : 'Private key is hidden'}
-                                        />
-                                        
-                                        <TextField
-                                            label="Webhook Proxy URL (Optional)"
-                                            value={displayConfig.webhooksProxy?.url || ''}
-                                            onChange={(e) => setEditingConfig(prev => ({ 
-                                                ...prev, 
-                                                webhooksProxy: { 
-                                                    ...prev.webhooksProxy, 
-                                                    url: e.target.value 
-                                                } 
-                                            }))}
-                                            disabled={!isCustomConfig}
-                                            fullWidth
-                                            placeholder="Leave empty to disable webhook features"
-                                        />
-                                        
-                                        <TextField
-                                            label="Webhook Proxy Shared Secret (Optional)"
-                                            value={displayConfig.webhooksProxy?.sharedSecret || ''}
-                                            onChange={(e) => setEditingConfig(prev => ({ 
-                                                ...prev, 
-                                                webhooksProxy: { 
-                                                    ...prev.webhooksProxy, 
-                                                    sharedSecret: e.target.value 
-                                                } 
-                                            }))}
-                                            disabled={!isCustomConfig}
-                                            fullWidth
-                                            type="password"
-                                            placeholder="Required only if webhook proxy URL is specified"
-                                        />
+                                        <FormControl fullWidth disabled={!isCustomConfig}>
+                                            <InputLabel>Authentication Type</InputLabel>
+                                            <Select
+                                                value={displayConfig.jwtAlgorithm || 'RS256'}
+                                                label="Authentication Type"
+                                                onChange={(e) => setEditingConfig(prev => ({ ...prev, jwtAlgorithm: e.target.value as 'RS256' | 'HS256' }))}
+                                            >
+                                                <MenuItem value="RS256">JaaS (RS256 with Private Key)</MenuItem>
+                                                <MenuItem value="HS256">HS256 (Shared Secret)</MenuItem>
+                                            </Select>
+                                        </FormControl>
+
+                                        {(displayConfig.jwtAlgorithm || 'RS256') === 'RS256' ? (
+                                            <>
+                                                <TextField
+                                                    label="Key ID (Optional)"
+                                                    value={displayConfig.kid || ''}
+                                                    onChange={(e) => setEditingConfig(prev => ({ ...prev, kid: e.target.value }))}
+                                                    disabled={!isCustomConfig}
+                                                    fullWidth
+                                                    placeholder="e.g., vpaas-magic-cookie-xxxxx/sample01"
+                                                />
+
+                                                <TextField
+                                                    label="Private Key (Optional)"
+                                                    value={isCustomConfig && editingConfig.privateKey ? editingConfig.privateKey : (displayConfig.privateKey ? '••••••••' : '')}
+                                                    onChange={(e) => setEditingConfig(prev => ({ ...prev, privateKey: e.target.value }))}
+                                                    disabled={!isCustomConfig}
+                                                    multiline
+                                                    rows={4}
+                                                    fullWidth
+                                                    placeholder={isCustomConfig ? 'Enter private key for JaaS authentication...' : 'Private key is hidden'}
+                                                />
+
+                                                <TextField
+                                                    label="Webhook Proxy URL (Optional)"
+                                                    value={displayConfig.webhooksProxy?.url || ''}
+                                                    onChange={(e) => setEditingConfig(prev => ({
+                                                        ...prev,
+                                                        webhooksProxy: {
+                                                            ...prev.webhooksProxy,
+                                                            url: e.target.value
+                                                        }
+                                                    }))}
+                                                    disabled={!isCustomConfig}
+                                                    fullWidth
+                                                    placeholder="Leave empty to disable webhook features"
+                                                />
+
+                                                <TextField
+                                                    label="Webhook Proxy Shared Secret (Optional)"
+                                                    value={displayConfig.webhooksProxy?.sharedSecret || ''}
+                                                    onChange={(e) => setEditingConfig(prev => ({
+                                                        ...prev,
+                                                        webhooksProxy: {
+                                                            ...prev.webhooksProxy,
+                                                            sharedSecret: e.target.value
+                                                        }
+                                                    }))}
+                                                    disabled={!isCustomConfig}
+                                                    fullWidth
+                                                    type="password"
+                                                    placeholder="Required only if webhook proxy URL is specified"
+                                                />
+                                            </>
+                                        ) : (
+                                            <TextField
+                                                label="Shared Secret (Required for HS256)"
+                                                value={displayConfig.jwtSecret || ''}
+                                                onChange={(e) => setEditingConfig(prev => ({ ...prev, jwtSecret: e.target.value }))}
+                                                disabled={!isCustomConfig}
+                                                fullWidth
+                                                type="password"
+                                                placeholder={isCustomConfig ? 'Enter shared secret for HS256 authentication...' : 'Shared secret is hidden'}
+                                            />
+                                        )}
                                     </Stack>
                                 </Box>
                             </Stack>
