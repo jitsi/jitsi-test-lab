@@ -1,14 +1,13 @@
 import React, { useState, useEffect, createContext, useContext } from 'react'
-import { 
-  Box, 
-  CssBaseline, 
-  Drawer, 
-  List, 
-  ListItem, 
-  ListItemButton, 
-  ListItemIcon, 
-  ListItemText, 
-  Toolbar, 
+import {
+  Box,
+  CssBaseline,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
   Typography,
   IconButton,
   ToggleButton,
@@ -17,15 +16,13 @@ import {
   Checkbox,
   Switch,
   FormControlLabel,
-  Collapse,
   Paper,
   Button
 } from '@mui/material'
-import { 
-  Settings, 
-  Webhook, 
-  Token, 
-  Tab,
+import {
+  Settings,
+  Webhook,
+  Token,
   Close,
   Circle,
   Cancel,
@@ -33,9 +30,9 @@ import {
   ViewColumn,
   GridView,
   ChevronLeft,
-  ChevronRight,
   CloudQueue,
-  ControlCamera
+  ControlCamera,
+  Api
 } from '@mui/icons-material'
 // Removed React Router imports to prevent URL changes
 import type { Config } from './config/index';
@@ -43,6 +40,7 @@ import { loadConfig } from './config/index';
 import WebhookProxy from './WebhookProxy'
 import { SettingsPage } from './components/SettingsPage'
 import { WebhooksPage } from './components/WebhooksPage'
+import { EndpointsPage } from './components/EndpointsPage'
 import { TokensPage } from './components/TokensPage'
 import { TabsPage } from './components/TabsPage'
 import { TabContent } from './components/TabContent'
@@ -52,7 +50,6 @@ import { DiagnosticPage } from './DiagnosticPage'
 import { TabsProvider, useTabsContext } from './contexts/TabsContext'
 
 const drawerWidth = 240
-const configPanelWidth = 350
 
 interface ConferenceState {
   name: string;
@@ -101,13 +98,14 @@ const sidebarItems = [
   { text: 'Environment Config', icon: <CloudQueue />, path: '/environment-config' },
   { text: 'Room Config', icon: <Settings />, path: '/settings' },
   { text: 'Webhooks', icon: <Webhook />, path: '/webhooks' },
+  { text: 'Endpoints', icon: <Api />, path: '/endpoints' },
   { text: 'Participants', icon: <Token />, path: '/participants' },
 ]
 
-function Sidebar({ 
-  configPanelOpen, 
-  setConfigPanelOpen, 
-  selectedConfigPage, 
+function Sidebar({
+  configPanelOpen,
+  setConfigPanelOpen,
+  selectedConfigPage,
   setSelectedConfigPage,
   navigate,
   location
@@ -135,7 +133,7 @@ function Sidebar({
 
     updateProxyStatus()
     const interval = setInterval(updateProxyStatus, 1000) // Check every second
-    
+
     return () => clearInterval(interval)
   }, [getCurrentProxy])
 
@@ -154,7 +152,7 @@ function Sidebar({
       // Add tab to selection - only if there's space
       const maxTabs = layoutMode === 'single' ? 1 : layoutMode === 'side-by-side' ? 2 : 4;
       const newSelection = [...selectedTabIds];
-      
+
       if (newSelection.length < maxTabs && !newSelection.includes(tabId)) {
         newSelection.push(tabId);
         setSelectedTabIds(newSelection);
@@ -195,9 +193,9 @@ function Sidebar({
         {/* Panel Header */}
         <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <img 
-              src="./science-beaker.png" 
-              alt="Jitsi Test Lab" 
+            <img
+              src="./science-beaker.png"
+              alt="Jitsi Test Lab"
               style={{ width: 24, height: 24 }}
             />
             <Typography variant="h6" component="h2" sx={{ fontWeight: 500 }}>
@@ -205,20 +203,23 @@ function Sidebar({
             </Typography>
           </Box>
         </Box>
-        
+
         <List>
           {sidebarItems.map((item) => {
             const hasWebhookConfig = config?.webhooksProxy?.url && config?.webhooksProxy?.sharedSecret
+            const hasAuthConfig = config?.kid && config?.privateKey
             const isWebhooksDisabled = item.text === 'Webhooks' && !hasWebhookConfig
-            
+            const isEndpointsDisabled = item.text === 'Endpoints' && !hasAuthConfig
+            const isDisabled = isWebhooksDisabled || isEndpointsDisabled
+
             return (
               <ListItem key={item.text} disablePadding>
-                <ListItemButton 
+                <ListItemButton
                   selected={selectedConfigPage === item.path}
-                  onClick={() => handleConfigPageClick(item.path, item.text)}
-                  disabled={isWebhooksDisabled}
+                  onClick={() => handleConfigPageClick(item.path)}
+                  disabled={isDisabled}
                   sx={{
-                    ...(isWebhooksDisabled && {
+                    ...(isDisabled && {
                       opacity: 0.5,
                       '&.Mui-disabled': {
                         opacity: 0.5
@@ -226,28 +227,28 @@ function Sidebar({
                     })
                   }}
                 >
-                  <ListItemIcon sx={{ ...(isWebhooksDisabled && { opacity: 0.5 }) }}>
+                  <ListItemIcon sx={{ ...(isDisabled && { opacity: 0.5 }) }}>
                     {item.icon}
                   </ListItemIcon>
-                  <ListItemText 
-                    primary={item.text} 
-                    sx={{ ...(isWebhooksDisabled && { opacity: 0.5 }) }}
+                  <ListItemText
+                    primary={item.text}
+                    sx={{ ...(isDisabled && { opacity: 0.5 }) }}
                   />
                   {item.text === 'Webhooks' && hasWebhookConfig && (
-                    <Circle 
-                      sx={{ 
+                    <Circle
+                      sx={{
                         fontSize: 12,
-                        color: proxyStatus === 'connected' ? 'success.main' : 
+                        color: proxyStatus === 'connected' ? 'success.main' :
                                proxyStatus === 'connecting' ? 'warning.main' : 'error.main',
                         ml: 1
-                      }} 
+                      }}
                     />
                   )}
                   {item.text === 'Webhooks' && !hasWebhookConfig && (
-                    <Typography 
-                      variant="caption" 
-                      sx={{ 
-                        ml: 1, 
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        ml: 1,
                         color: 'text.secondary',
                         fontSize: '0.7rem'
                       }}
@@ -255,17 +256,29 @@ function Sidebar({
                       (config required)
                     </Typography>
                   )}
+                  {item.text === 'Endpoints' && !hasAuthConfig && (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        ml: 1,
+                        color: 'text.secondary',
+                        fontSize: '0.7rem'
+                      }}
+                    >
+                      (auth required)
+                    </Typography>
+                  )}
                 </ListItemButton>
               </ListItem>
             )
           })}
-          
+
           {/* Separator before Tabs */}
           <Divider sx={{ my: 1 }} />
-          
+
           {/* iFrame Control */}
           <ListItem disablePadding>
-            <ListItemButton 
+            <ListItemButton
               selected={selectedConfigPage === '/iframe-control'}
               onClick={() => handleConfigPageClick('/iframe-control', 'iFrame Control')}
               sx={{
@@ -283,7 +296,7 @@ function Sidebar({
               <ListItemText primary="iFrame Control" />
             </ListItemButton>
           </ListItem>
-          
+
           {/* Layout Mode Selector */}
           <ListItem disablePadding>
               <Box sx={{ px: 2, py: 1, width: '100%' }}>
@@ -300,8 +313,8 @@ function Sidebar({
                     }
                   }}
                   size="small"
-                  sx={{ 
-                    '& .MuiToggleButton-root': { 
+                  sx={{
+                    '& .MuiToggleButton-root': {
                       fontSize: '0.75rem',
                       px: 1,
                       minWidth: 60
@@ -321,7 +334,7 @@ function Sidebar({
                     4
                   </ToggleButton>
                 </ToggleButtonGroup>
-                
+
                 <FormControlLabel
                   control={
                     <Switch
@@ -337,7 +350,7 @@ function Sidebar({
                   }
                   sx={{ mt: 1 }}
                 />
-                
+
                 {tabs.length > 0 && (
                   <Button
                     size="small"
@@ -345,7 +358,7 @@ function Sidebar({
                     color="error"
                     startIcon={<Cancel sx={{ fontSize: 16 }} />}
                     onClick={closeAllTabs}
-                    sx={{ 
+                    sx={{
                       mt: 1,
                       fontSize: '0.75rem',
                       py: 0.5,
@@ -357,15 +370,15 @@ function Sidebar({
                 )}
               </Box>
             </ListItem>
-          
+
           <Divider sx={{ my: 1 }} />
-          
+
           {/* Individual Tab Items */}
           {tabs.map((tab, index) => (
-            <ListItem 
-              key={tab.id} 
-              disablePadding 
-              sx={{ 
+            <ListItem
+              key={tab.id}
+              disablePadding
+              sx={{
                 pl: 2,
                 display: 'flex',
                 alignItems: 'center'
@@ -415,14 +428,14 @@ function Sidebar({
                         sx={{ p: 0 }}
                       />
                     ) : (
-                      <Circle 
-                        sx={{ 
+                      <Circle
+                        sx={{
                           fontSize: 8,
                           color: tab.connectionState === 'prejoin' ? 'grey.500' :
                                  tab.connectionState === 'joining' ? 'warning.main' :
                                  tab.connectionState === 'joined' ? 'success.main' :
                                  tab.connectionState === 'error' ? 'error.main' : 'grey.500'
-                        }} 
+                        }}
                       />
                     )}
                   </Box>
@@ -438,11 +451,11 @@ function Sidebar({
                 </Box>
                 {/* Separate close button area */}
                 <Box sx={{ display: 'flex', alignItems: 'center', pl: 0.5 }}>
-                  <IconButton 
+                  <IconButton
                     size="small"
                     onClick={(e) => handleCloseTab(tab.id, e)}
-                    sx={{ 
-                      width: 20, 
+                    sx={{
+                      width: 20,
                       height: 20,
                       '&:hover': {
                         bgcolor: 'error.light',
@@ -463,15 +476,15 @@ function Sidebar({
 }
 
 
-function ConfigPanel({ 
-  open, 
-  selectedPage, 
+function ConfigPanel({
+  open,
+  selectedPage,
   onToggle,
   width,
   onWidthChange
-}: { 
-  open: boolean; 
-  selectedPage: string | null; 
+}: {
+  open: boolean;
+  selectedPage: string | null;
   onToggle: () => void;
   width: number;
   onWidthChange: (width: number) => void;
@@ -490,7 +503,7 @@ function ConfigPanel({
   React.useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
-      
+
       const deltaX = e.clientX - startX;
       const newWidth = Math.max(250, Math.min(800, startWidth + deltaX));
       onWidthChange(newWidth);
@@ -519,6 +532,8 @@ function ConfigPanel({
         return <SettingsPage />;
       case '/webhooks':
         return <WebhooksPage />;
+      case '/endpoints':
+        return <EndpointsPage />;
       case '/participants':
         return <TokensPage />;
       case '/iframe-control':
@@ -545,11 +560,11 @@ function ConfigPanel({
     >
       {open && (
         <>
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            p: 2, 
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            p: 2,
             borderBottom: '1px solid',
             borderColor: 'divider',
             minHeight: 64
@@ -558,6 +573,7 @@ function ConfigPanel({
               {selectedPage === '/environment-config' ? 'Environment Config' :
                selectedPage === '/settings' ? 'Room Config' :
                selectedPage === '/webhooks' ? 'Webhooks' :
+               selectedPage === '/endpoints' ? 'Endpoints' :
                selectedPage === '/participants' ? 'Participants' : 'Configuration'}
             </Typography>
             <IconButton onClick={onToggle} size="small">
@@ -591,25 +607,25 @@ function ConfigPanel({
   );
 }
 
-function MainContent({ 
-  configPanelOpen, 
+function MainContent({
+  configPanelOpen,
   selectedConfigPage,
   location
-}: { 
-  configPanelOpen: boolean; 
+}: {
+  configPanelOpen: boolean;
   selectedConfigPage: string | null;
   location: { pathname: string };
 }) {
   console.log('MainContent: Component rendering')
   const { tabs, activeTabId, layoutMode, selectedTabIds, useTabColors } = useTabsContext()
   console.log('MainContent: Current location:', location.pathname)
-  
+
   const isTabsPage = location.pathname === '/tabs'
 
   // Get layout configuration based on mode
   const getLayoutConfig = () => {
     if (layoutMode === 'single') {
-      return { 
+      return {
         containerStyle: { display: 'flex', flexDirection: 'column' },
         itemStyle: { flex: 1 }
       };
@@ -620,8 +636,8 @@ function MainContent({
       };
     } else { // 2x2
       return {
-        containerStyle: { 
-          display: 'grid', 
+        containerStyle: {
+          display: 'grid',
           gridTemplateColumns: '1fr 1fr',
           gridTemplateRows: '1fr 1fr',
           gap: 1
@@ -634,7 +650,7 @@ function MainContent({
   const layoutConfig = getLayoutConfig();
 
   return (
-    <Box sx={{ 
+    <Box sx={{
       height: '100vh',
       overflow: 'hidden',
       display: 'flex',
@@ -642,26 +658,26 @@ function MainContent({
     }}>
       {isTabsPage ? (
         // 3-panel layout for tabs page
-        <Box sx={{ 
-          flexGrow: 1, 
-          overflow: 'hidden', 
-          position: 'relative', 
+        <Box sx={{
+          flexGrow: 1,
+          overflow: 'hidden',
+          position: 'relative',
           height: '100%',
           ...layoutConfig.containerStyle
         }}>
           {/* Always render all tabs - keep iframes loaded but use visibility to show/hide */}
           {tabs.map((tab) => {
-            const isDisplayed = layoutMode === 'single' 
+            const isDisplayed = layoutMode === 'single'
               ? activeTabId === tab.id
               : selectedTabIds.includes(tab.id);
-            
-              
+
+
             if (layoutMode === 'single') {
               // Single mode: full screen positioning
               return (
                 <Box
                   key={tab.id}
-                  sx={{ 
+                  sx={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
@@ -690,7 +706,7 @@ function MainContent({
                 return (
                   <Box
                     key={tab.id}
-                    sx={{ 
+                    sx={{
                       position: 'absolute',
                       top: 0,
                       left: 0,
@@ -710,7 +726,7 @@ function MainContent({
                 return (
                   <Box
                     key={tab.id}
-                    sx={{ 
+                    sx={{
                       ...layoutConfig.itemStyle,
                       border: '1px solid',
                       borderColor: 'divider',
@@ -732,14 +748,14 @@ function MainContent({
               }
             }
           })}
-          
+
           {/* Empty slots for multi-tab layouts */}
-          {layoutMode !== 'single' && Array.from({ 
-            length: Math.max(0, (layoutMode === 'side-by-side' ? 2 : 4) - selectedTabIds.length) 
+          {layoutMode !== 'single' && Array.from({
+            length: Math.max(0, (layoutMode === 'side-by-side' ? 2 : 4) - selectedTabIds.length)
           }).map((_, index) => (
             <Box
               key={`empty-${index}`}
-              sx={{ 
+              sx={{
                 ...layoutConfig.itemStyle,
                 border: '1px solid',
                 borderColor: 'divider',
@@ -757,8 +773,8 @@ function MainContent({
         </Box>
       ) : (
         // Legacy routing for non-tabs pages
-        <Box sx={{ 
-          flexGrow: 1, 
+        <Box sx={{
+          flexGrow: 1,
           overflow: 'auto',
           p: 3
         }}>
@@ -768,6 +784,7 @@ function MainContent({
               case '/environment-config': return <JaaSConfigPage />
               case '/settings': return <SettingsPage />
               case '/webhooks': return <WebhooksPage />
+              case '/endpoints': return <EndpointsPage />
               case '/participants': return <TokensPage />
               case '/iframe-control': return <IFrameControlPage />
               case '/diagnostics': return <DiagnosticPage />
@@ -789,13 +806,13 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentConference, setCurrentConference] = useState<string>('test-room')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  
+
   // Join options state
   const [prejoinScreen, setPrejoinScreen] = useState<'default' | 'on' | 'off'>('default')
   const [p2pSetting, setP2pSetting] = useState<'default' | 'on' | 'off'>('default')
   const [audioSetting, setAudioSetting] = useState<'default' | 'on' | 'off'>('default')
   const [videoSetting, setVideoSetting] = useState<'default' | 'on' | 'off'>('default')
-  
+
   // Token options state
   const [displayName, setDisplayName] = useState<string>('Test User')
   const [expiration, setExpiration] = useState<string>('24h')
@@ -814,7 +831,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   const loadActiveConfig = async () => {
     console.log('Loading configuration from config.js...')
     const loadedConfig = await loadConfig()
-    
+
     // Check if there's a selected preset in localStorage
     let selectedPresetId: string | null = null
     try {
@@ -822,7 +839,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Ignore localStorage errors
     }
-    
+
     // Find the selected preset or use the active config
     let activeConfig = loadedConfig
     if (selectedPresetId && loadedConfig.presets) {
@@ -851,31 +868,31 @@ function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
     }
-    
-    console.log('Configuration loaded:', { 
-      domain: activeConfig.domain, 
+
+    console.log('Configuration loaded:', {
+      domain: activeConfig.domain,
       tenant: activeConfig.tenant,
       kid: activeConfig.kid,
       hasPrivateKey: !!activeConfig.privateKey,
       webhooksProxy: activeConfig.webhooksProxy,
       selectedPreset: selectedPresetId || 'default'
     })
-    
+
     return activeConfig
   }
-  
+
   const refreshConfig = async () => {
     try {
       const activeConfig = await loadActiveConfig()
       setConfig(activeConfig)
-      
+
       // Update webhook proxy connections for existing conferences
       if (activeConfig.webhooksProxy) {
         const updatedConferences = new Map<string, ConferenceState>()
         conferences.forEach((conferenceState, name) => {
           // Disconnect old proxy
           conferenceState.proxy.disconnect()
-          
+
           // Create new proxy with updated config
           const newProxy = WebhookProxy.getInstance(
             activeConfig.webhooksProxy.url,
@@ -884,14 +901,14 @@ function AppProvider({ children }: { children: React.ReactNode }) {
             activeConfig.tenant
           )
           newProxy.connect()
-          
+
           updatedConferences.set(name, {
             name,
             proxy: newProxy
           })
         })
         setConferences(updatedConferences)
-        
+
         // If there's a current conference, ensure it has the updated proxy
         if (currentConference && !updatedConferences.has(currentConference)) {
           const defaultProxy = WebhookProxy.getInstance(
@@ -924,13 +941,13 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     const initializeApp = async () => {
       console.log('AppProvider: useEffect starting initialization')
       setError(null)
-      
+
       try {
         const activeConfig = await loadActiveConfig()
         setConfig(activeConfig)
-          
+
         const newConferences = new Map<string, ConferenceState>()
-        
+
         // Create default proxy using getInstance for deduplication (only if webhooksProxy is configured)
         if (activeConfig.webhooksProxy?.url && activeConfig.webhooksProxy?.sharedSecret) {
           const defaultProxy = WebhookProxy.getInstance(
@@ -939,16 +956,16 @@ function AppProvider({ children }: { children: React.ReactNode }) {
             'test-room',
             activeConfig.tenant
           )
-          
+
           // Connect directly to remote proxy server
           defaultProxy.connect()
-          
+
           newConferences.set('test-room', {
             name: 'test-room',
             proxy: defaultProxy
           })
         }
-        
+
         setConferences(newConferences)
         setIsLoading(false)
         console.log('AppProvider: Initialization complete')
@@ -958,7 +975,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false)
       }
     }
-    
+
     initializeApp()
   }, [])
 
@@ -981,7 +998,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
         console.log('Disconnecting current proxy for:', currentConference)
         currentProxy.disconnect()
       }
-      
+
       if (!config.webhooksProxy?.url || !config.webhooksProxy?.sharedSecret) {
         console.warn('Cannot create conference: webhooksProxy not configured')
         return
@@ -993,10 +1010,10 @@ function AppProvider({ children }: { children: React.ReactNode }) {
         name,
         config.tenant
       )
-      
+
       // Connect the new proxy
       newProxy.connect()
-      
+
       const newConferences = new Map(conferences)
       newConferences.set(name, {
         name,
@@ -1004,7 +1021,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
       })
       console.log('Adding conference to map:', name, 'New conferences:', Array.from(newConferences.keys()))
       setConferences(newConferences)
-      
+
       // Automatically set as current conference after adding
       console.log('Auto-switching to new conference:', name)
       setCurrentConference(name)
@@ -1070,12 +1087,12 @@ function AppLayout() {
   const [currentPage, setCurrentPage] = useState<string>('/tabs')
   const location = { pathname: currentPage }
   const navigate = (path: string) => setCurrentPage(path)
-  
+
   const isTabsPage = location.pathname === '/tabs'
   const [configPanelOpen, setConfigPanelOpen] = useState(false)
   const [selectedConfigPage, setSelectedConfigPage] = useState<string | null>(null)
   const [configPanelWidth, setConfigPanelWidth] = useState(800)
-  
+
   // Handle default page setup
   useEffect(() => {
     if (location.pathname === '/tabs' && !selectedConfigPage) {
@@ -1083,7 +1100,7 @@ function AppLayout() {
       setConfigPanelOpen(true);
     }
   }, [location.pathname, selectedConfigPage]);
-  
+
   // Add data attribute to body for CSS targeting
   React.useEffect(() => {
     if (isTabsPage) {
@@ -1095,17 +1112,17 @@ function AppLayout() {
       document.body.removeAttribute('data-tabs-page');
     };
   }, [isTabsPage]);
-  
+
   return (
-    <Box sx={{ 
+    <Box sx={{
       display: 'flex',
       width: '100vw',
       height: '100vh'
     }}>
       <CssBaseline />
-      
+
       {/* Left Panel - Navigation */}
-      <Sidebar 
+      <Sidebar
         configPanelOpen={configPanelOpen}
         setConfigPanelOpen={setConfigPanelOpen}
         selectedConfigPage={selectedConfigPage}
@@ -1113,10 +1130,10 @@ function AppLayout() {
         navigate={navigate}
         location={location}
       />
-      
+
       {/* Middle Panel - Collapsible Config Pages */}
       {isTabsPage && (
-        <ConfigPanel 
+        <ConfigPanel
           open={configPanelOpen}
           selectedPage={selectedConfigPage}
           onToggle={() => setConfigPanelOpen(!configPanelOpen)}
@@ -1124,18 +1141,18 @@ function AppLayout() {
           onWidthChange={setConfigPanelWidth}
         />
       )}
-      
+
       {/* Right Panel - Main Content */}
       <Box
         component="main"
-        sx={{ 
+        sx={{
           flexGrow: 1,
           height: '100vh',
           overflow: 'hidden',
           p: isTabsPage ? 0 : 3
         }}
       >
-        <MainContent 
+        <MainContent
           configPanelOpen={configPanelOpen}
           selectedConfigPage={selectedConfigPage}
           location={location}
