@@ -173,7 +173,7 @@ export function JaaSConfigPage() {
 
     const handleCreateFromScratch = () => {
         // Generate a default name with suffix if needed
-        let baseName = 'New Configuration';
+        const baseName = 'New Configuration';
         let configName = baseName;
         let counter = 1;
         

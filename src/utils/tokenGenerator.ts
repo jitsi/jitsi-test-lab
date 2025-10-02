@@ -78,12 +78,12 @@ function parseExpiration(exp: string): number {
 }
 
 export function generatePayload(options: TokenOptions): any {
-    // Build features object from permissions
+    // Build features object from permissions (excluding admin which goes to root)
     const features: Record<string, boolean | string> = {};
-    
+
     if (options.permissions) {
         Object.entries(options.permissions).forEach(([key, value]) => {
-            if (value) {
+            if (value && key !== 'admin') { // Exclude admin from features
                 // Convert boolean true to string 'true' for certain permissions for compatibility
                 if (['outbound-call', 'transcription', 'recording'].includes(key)) {
                     features[key] = 'true';
@@ -93,7 +93,7 @@ export function generatePayload(options: TokenOptions): any {
             }
         });
     }
-    
+
     const payload = {
         'aud': 'jitsi',
         'iss': 'chat',
@@ -117,10 +117,15 @@ export function generatePayload(options: TokenOptions): any {
     } else if (options.visitor) {
         (payload.context.user as any).role = 'visitor';
     }
-    
+
     // Handle hidden-from-recorder as a user property
     if (options.permissions?.['hidden-from-recorder']) {
         (payload.context.user as any)['hidden-from-recorder'] = true;
+    }
+
+    // Handle admin permission at root level
+    if (options.permissions?.admin) {
+        (payload as any).admin = true; // eslint-disable-line @typescript-eslint/no-explicit-any
     }
 
     return payload;
