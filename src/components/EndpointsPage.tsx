@@ -186,7 +186,10 @@ export function EndpointsPage() {
             case 'ban-user':
                 return null; // No body for ban user
             case 'ban-jwt':
-                return { jwt: params.jwtToBan };
+                return {
+                    appId: config.tenant,
+                    jwt: params.jwtToBan
+                };
             case 'destroy-room':
                 return {
                     action: 'DESTROY',
