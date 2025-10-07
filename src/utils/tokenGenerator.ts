@@ -180,6 +180,7 @@ export async function generateToken(options: TokenOptions): Promise<Token> {
                     typ: 'JWT'
                 })
                 .setIssuedAt()
+                .setNotBefore(Math.floor(Date.now() / 1000))
                 .setExpirationTime(payload.exp)
                 .sign(secret);
         } else {
@@ -219,6 +220,7 @@ export async function generateToken(options: TokenOptions): Promise<Token> {
                     kid: options.keyId
                 })
                 .setIssuedAt()
+                .setNotBefore(Math.floor(Date.now() / 1000))
                 .setExpirationTime(payload.exp)
                 .sign(privateKey);
         }

@@ -55,10 +55,12 @@ export type IToken = {
 };
 
 export function generatePayload(options: ITokenOptions): any {
+    const now = Math.floor(Date.now() / 1000);
     const payload = {
         'aud': 'jitsi',
         'iss': 'chat',
         'sub': options?.sub || '',
+        'nbf': now,
         'context': {
             'user': {
                 'name': options.displayName,
