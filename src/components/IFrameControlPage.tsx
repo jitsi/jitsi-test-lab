@@ -52,6 +52,10 @@ export function IFrameControlPage() {
     const [iframeControlExpanded, setIframeControlExpanded] = useState(true);
     const [eventLogExpanded, setEventLogExpanded] = useState(true);
 
+    // Getter function states
+    const [getterResults, setGetterResults] = useState<Record<string, any>>({});
+    const [participantIdInput, setParticipantIdInput] = useState('');
+
     const selectedTab = activeTabId ? tabs.find(tab => tab.id === activeTabId) : null;
     const allEvents = activeTabId ? getApiEvents(activeTabId) : [];
     const eventLog = eventFilter 
@@ -89,6 +93,45 @@ export function IFrameControlPage() {
     const clearEventLog = () => {
         if (activeTabId) {
             clearApiEvents(activeTabId);
+        }
+    };
+
+    const executeGetter = async (getterName: string, ...args: any[]) => {
+        if (!activeTabId) return;
+
+        const api = getTabApi(activeTabId);
+        if (!api) {
+            console.error('No API available for selected tab');
+            return;
+        }
+
+        try {
+            const result = await api[getterName](...args);
+
+            // Handle special cases for non-serializable results
+            let displayResult = result;
+            if (getterName === 'getIFrame' && result && result.tagName) {
+                displayResult = {
+                    tagName: result.tagName,
+                    src: result.src,
+                    width: result.width || result.style?.width,
+                    height: result.height || result.style?.height,
+                    id: result.id,
+                    className: result.className
+                };
+            }
+
+            setGetterResults(prev => ({
+                ...prev,
+                [getterName]: displayResult
+            }));
+            console.log(`${getterName} result:`, result);
+        } catch (error) {
+            console.error(`${getterName} failed:`, error);
+            setGetterResults(prev => ({
+                ...prev,
+                [getterName]: { error: error.message || 'Unknown error' }
+            }));
         }
     };
 
@@ -405,15 +448,239 @@ export function IFrameControlPage() {
                                                         executeCommand(customCommand, args);
                                                     } catch (error) {
                                                         console.error('Invalid JSON in arguments:', error);
-                                                        addEventLogEntry('commandFailed', { 
-                                                            command: customCommand, 
-                                                            error: 'Invalid JSON arguments' 
-                                                        });
                                                     }
                                                 }}
                                                 disabled={!customCommand}
                                             >
                                                 Execute Command
+                                            </Button>
+                                        </Stack>
+                                    </AccordionDetails>
+                                </Accordion>
+
+                                {/* Getter Functions */}
+                                <Accordion>
+                                    <AccordionSummary expandIcon={<ExpandMore />}>
+                                        <Typography variant="subtitle1">Getter Functions</Typography>
+                                    </AccordionSummary>
+                                    <AccordionDetails>
+                                        <Stack spacing={2}>
+                                            {/* General Getters */}
+                                            <Typography variant="subtitle2">General Information</Typography>
+                                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getNumberOfParticipants')}
+                                                    size="small"
+                                                >
+                                                    Get Participant Count
+                                                </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getSessionId')}
+                                                    size="small"
+                                                >
+                                                    Get Session ID
+                                                </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getDeploymentInfo')}
+                                                    size="small"
+                                                >
+                                                    Get Deployment Info
+                                                </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getRoomsInfo')}
+                                                    size="small"
+                                                >
+                                                    Get Rooms Info
+                                                </Button>
+                                            </Stack>
+
+                                            <Divider />
+
+                                            {/* Device/Quality Getters */}
+                                            <Typography variant="subtitle2">Devices & Quality</Typography>
+                                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getAvailableDevices')}
+                                                    size="small"
+                                                >
+                                                    Get Available Devices
+                                                </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getCurrentDevices')}
+                                                    size="small"
+                                                >
+                                                    Get Current Devices
+                                                </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getVideoQuality')}
+                                                    size="small"
+                                                >
+                                                    Get Video Quality
+                                                </Button>
+                                            </Stack>
+
+                                            <Divider />
+
+                                            {/* API Capabilities */}
+                                            <Typography variant="subtitle2">API Capabilities</Typography>
+                                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getSupportedCommands')}
+                                                    size="small"
+                                                >
+                                                    Get Supported Commands
+                                                </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getSupportedEvents')}
+                                                    size="small"
+                                                >
+                                                    Get Supported Events
+                                                </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getIFrame')}
+                                                    size="small"
+                                                >
+                                                    Get iFrame Element
+                                                </Button>
+                                            </Stack>
+
+                                            <Divider />
+
+                                            {/* Streaming/Document URLs */}
+                                            <Typography variant="subtitle2">URLs</Typography>
+                                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getLivestreamUrl')}
+                                                    size="small"
+                                                >
+                                                    Get Livestream URL
+                                                </Button>
+                                                <Button
+                                                    variant="outlined"
+                                                    onClick={() => executeGetter('getSharedDocumentUrl')}
+                                                    size="small"
+                                                >
+                                                    Get Shared Doc URL
+                                                </Button>
+                                            </Stack>
+
+                                            <Divider />
+
+                                            {/* Participant-specific getters */}
+                                            <Typography variant="subtitle2">Participant Information</Typography>
+                                            <Stack spacing={1}>
+                                                <TextField
+                                                    label="Participant ID"
+                                                    value={participantIdInput}
+                                                    onChange={(e) => setParticipantIdInput(e.target.value)}
+                                                    size="small"
+                                                    placeholder="Enter participant ID"
+                                                />
+                                                <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                    <Button
+                                                        variant="outlined"
+                                                        onClick={() => executeGetter('getDisplayName', participantIdInput)}
+                                                        size="small"
+                                                        disabled={!participantIdInput}
+                                                    >
+                                                        Get Display Name
+                                                    </Button>
+                                                    <Button
+                                                        variant="outlined"
+                                                        onClick={() => executeGetter('getEmail', participantIdInput)}
+                                                        size="small"
+                                                        disabled={!participantIdInput}
+                                                    >
+                                                        Get Email
+                                                    </Button>
+                                                    <Button
+                                                        variant="outlined"
+                                                        onClick={() => executeGetter('getAvatarURL', participantIdInput)}
+                                                        size="small"
+                                                        disabled={!participantIdInput}
+                                                    >
+                                                        Get Avatar URL (deprecated)
+                                                    </Button>
+                                                </Stack>
+                                            </Stack>
+
+                                            <Divider />
+
+                                            {/* Results Display */}
+                                            <Typography variant="subtitle2">Results</Typography>
+                                            <Paper variant="outlined" sx={{ maxHeight: 300, overflow: 'auto', bgcolor: '#fafafa' }}>
+                                                {Object.keys(getterResults).length === 0 ? (
+                                                    <Box sx={{ p: 2, textAlign: 'center' }}>
+                                                        <Typography color="text.secondary" variant="body2">
+                                                            No getter functions executed yet. Click a button above to test getter functions.
+                                                        </Typography>
+                                                    </Box>
+                                                ) : (
+                                                    <List dense>
+                                                        {Object.entries(getterResults).map(([functionName, result]) => (
+                                                            <ListItem key={functionName} divider>
+                                                                <ListItemText
+                                                                    primary={
+                                                                        <Stack direction="row" alignItems="center" spacing={1}>
+                                                                            <Typography variant="body2" color="primary" component="span">
+                                                                                {functionName}()
+                                                                            </Typography>
+                                                                            <Button
+                                                                                size="small"
+                                                                                variant="text"
+                                                                                onClick={() => {
+                                                                                    setGetterResults(prev => {
+                                                                                        const { [functionName]: removed, ...rest } = prev;
+                                                                                        return rest;
+                                                                                    });
+                                                                                }}
+                                                                                sx={{ minWidth: 'auto', p: 0.5 }}
+                                                                            >
+                                                                                <Clear fontSize="small" />
+                                                                            </Button>
+                                                                        </Stack>
+                                                                    }
+                                                                    secondary={
+                                                                        <Typography
+                                                                            variant="body2"
+                                                                            component="pre"
+                                                                            sx={{
+                                                                                fontFamily: 'monospace',
+                                                                                fontSize: '0.75rem',
+                                                                                whiteSpace: 'pre-wrap',
+                                                                                wordBreak: 'break-word',
+                                                                                mt: 0.5,
+                                                                                color: result.error ? 'error.main' : 'text.primary'
+                                                                            }}
+                                                                        >
+                                                                            {JSON.stringify(result, null, 2)}
+                                                                        </Typography>
+                                                                    }
+                                                                />
+                                                            </ListItem>
+                                                        ))}
+                                                    </List>
+                                                )}
+                                            </Paper>
+                                            <Button
+                                                variant="outlined"
+                                                startIcon={<Clear />}
+                                                onClick={() => setGetterResults({})}
+                                                size="small"
+                                                disabled={Object.keys(getterResults).length === 0}
+                                            >
+                                                Clear All Results
                                             </Button>
                                         </Stack>
                                     </AccordionDetails>

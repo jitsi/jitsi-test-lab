@@ -32,7 +32,7 @@ Note: The WebSocket proxy (`websocket-proxy.js`) runs on port 8080 and bridges c
 - WebSocket proxy server for webhook testing
 
 **Key Components Structure:**
-- `src/components/IFrameControlPage.tsx` - Jitsi Meet iframe controls
+- `src/components/IFrameControlPage.tsx` - Jitsi Meet iframe controls and API getter functions
 - `src/components/JaaSConfigPage.tsx` - JaaS configuration management
 - `src/components/TokensPage.tsx` - JWT token generation for JaaS
 - `src/components/WebhooksPage.tsx` - Webhook testing interface
@@ -72,6 +72,25 @@ Multi-stage Docker build process:
 - Production stage uses Nginx Alpine
 - Automatic Docker Hub publishing via GitHub Actions
 - Support for custom config.json via volume mounts
+
+## Jitsi iFrame API Features
+
+**iFrame Control & API Getter Functions:**
+The `IFrameControlPage.tsx` provides comprehensive testing for Jitsi Meet External API:
+
+- **Command Execution**: Audio/video controls, recording, streaming, chat, meeting management
+- **Getter Functions**: Complete set of iFrame API getters including:
+  - `getNumberOfParticipants()` - Participant count
+  - `getSessionId()` - Meeting session ID
+  - `getDeploymentInfo()` - Server deployment information
+  - `getAvailableDevices()` / `getCurrentDevices()` - Device management
+  - `getVideoQuality()` - Video quality settings
+  - `getSupportedCommands()` / `getSupportedEvents()` - API capabilities
+  - `getLivestreamUrl()` / `getSharedDocumentUrl()` - URLs
+  - `getDisplayName()` / `getEmail()` / `getAvatarURL()` - Participant info
+  - `getIFrame()` - Direct iframe element access
+- **Results Display**: JSON-formatted results with error handling
+- **Real-time Event Logging**: All API events captured and filterable
 
 ## Testing Integration
 
