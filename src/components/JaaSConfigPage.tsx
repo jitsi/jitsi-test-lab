@@ -14,7 +14,9 @@ import {
     InputLabel,
     Chip,
     IconButton,
-    Tooltip
+    Tooltip,
+    FormControlLabel,
+    Checkbox
 } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useAppContext } from '../App';
@@ -27,6 +29,7 @@ interface JaaSPreset {
     privateKey: string;
     jwtAlgorithm?: 'RS256' | 'HS256';
     jwtSecret?: string;
+    developmentMode?: boolean;
     webhooksProxy: {
         url: string;
         sharedSecret: string;
@@ -326,7 +329,7 @@ export function JaaSConfigPage() {
                                             disabled={!isCustomConfig}
                                             fullWidth
                                         />
-                                        
+
                                         <TextField
                                             label={displayConfig.jwtAlgorithm === 'HS256' ? 'Tenant (Required for HS256)' : 'Tenant (Optional)'}
                                             value={displayConfig.tenant || ''}
@@ -334,6 +337,17 @@ export function JaaSConfigPage() {
                                             disabled={!isCustomConfig}
                                             fullWidth
                                             placeholder={displayConfig.jwtAlgorithm === 'HS256' ? 'e.g., my-tenant-name' : 'Leave empty for public Jitsi Meet'}
+                                        />
+
+                                        <FormControlLabel
+                                            control={
+                                                <Checkbox
+                                                    checked={displayConfig.developmentMode || false}
+                                                    onChange={(e) => setEditingConfig(prev => ({ ...prev, developmentMode: e.target.checked }))}
+                                                    disabled={!isCustomConfig}
+                                                />
+                                            }
+                                            label="Development Mode (use localhost:8080 for JitsiMeetExternalAPI)"
                                         />
                                     </Stack>
                                 </Box>

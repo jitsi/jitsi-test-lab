@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { 
-    Box, 
-    Paper, 
-    Button, 
-    Typography, 
+import {
+    Box,
+    Paper,
+    Button,
+    Typography,
     Chip,
     Stack,
     Divider,
@@ -13,6 +13,7 @@ import {
 import { ExpandMore, ExpandLess, Close } from '@mui/icons-material';
 import type { TabData } from '../contexts/TabsContext';
 import { useTabsContext } from '../contexts/TabsContext';
+import { useAppContext } from '../App';
 
 interface TabContentProps {
     tab: TabData;
@@ -28,6 +29,7 @@ interface DeploymentInfo {
 }
 
 export const TabContent: React.FC<TabContentProps> = ({ tab }) => {
+    const { config } = useAppContext();
     const { updateTabConnectionState, useTabColors, closeTab, registerTabApi, unregisterTabApi, logApiEvent } = useTabsContext();
     const iframeContainerRef = useRef<HTMLDivElement>(null);
     const apiRef = useRef<any>(null);
@@ -219,7 +221,12 @@ export const TabContent: React.FC<TabContentProps> = ({ tab }) => {
                     return;
                 }
             } else {
-                scriptSrc = `https://${tab.domain}/${tab.tenant}/libs/external_api.min.js`;
+                // Use localhost:8080 if development mode is enabled
+                if (config?.developmentMode) {
+                    scriptSrc = `https://localhost:8080/libs/external_api.min.js`;
+                } else {
+                    scriptSrc = `https://${tab.domain}/${tab.tenant}/libs/external_api.min.js`;
+                }
             }
             
             if (!(window as any).JitsiMeetExternalAPI) {
@@ -555,7 +562,9 @@ export const TabContent: React.FC<TabContentProps> = ({ tab }) => {
                     }
                 };
 
-                const api = new JitsiMeetExternalAPI(tab.domain, options);
+                // Use localhost:8080 if development mode is enabled, otherwise use tab.domain
+                const apiDomain = config?.developmentMode ? 'localhost:8080' : tab.domain;
+                const api = new JitsiMeetExternalAPI(apiDomain, options);
                 apiRef.current = api;
 
                 // Register API for iFrame Control
