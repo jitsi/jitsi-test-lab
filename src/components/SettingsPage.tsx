@@ -23,9 +23,13 @@ import {
   Chip,
   Button,
   Stack,
-  Divider
+  Divider,
+  IconButton,
+  Collapse
 } from '@mui/material'
 import { useAppContext } from '../App'
+import { ExpandMore, Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material'
+import { v4 as uuidv4 } from 'uuid'
 
 // Inline interface to avoid import issues
 interface IMeetingSettings {
@@ -49,6 +53,17 @@ export function SettingsPage() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [newRoomName, setNewRoomName] = useState('')
   const [roomNameError, setRoomNameError] = useState('')
+  const [configOverridesExpanded, setConfigOverridesExpanded] = useState<boolean>(false)
+
+  // Custom config overrides state
+  const [configOverrides, setConfigOverrides] = useState<Array<{key: string, value: string, id: string}>>(() => {
+    try {
+      const saved = localStorage.getItem('room-config-overrides')
+      return saved ? JSON.parse(saved) : [{ key: '', value: '', id: uuidv4() }]
+    } catch {
+      return [{ key: '', value: '', id: uuidv4() }]
+    }
+  })
 
   const proxy = getCurrentProxy()
 
@@ -57,6 +72,29 @@ export function SettingsPage() {
       setSettings(proxy.defaultMeetingSettings)
     }
   }, [proxy])
+
+  // Save config overrides to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('room-config-overrides', JSON.stringify(configOverrides))
+    } catch (error) {
+      console.error('Failed to save config overrides:', error)
+    }
+  }, [configOverrides])
+
+  const addConfigOverride = () => {
+    setConfigOverrides(prev => [...prev, { key: '', value: '', id: uuidv4() }])
+  }
+
+  const removeConfigOverride = (id: string) => {
+    setConfigOverrides(prev => prev.filter(item => item.id !== id))
+  }
+
+  const updateConfigOverride = (id: string, field: 'key' | 'value', newValue: string) => {
+    setConfigOverrides(prev => prev.map(item =>
+      item.id === id ? { ...item, [field]: newValue } : item
+    ))
+  }
 
   // Clear the new room name field when currentConference changes (to show it was successful)
   useEffect(() => {
@@ -73,13 +111,28 @@ export function SettingsPage() {
     }
   }, [])
 
-  // Auto-save whenever settings change
+  // Auto-save whenever settings or config overrides change
   useEffect(() => {
     const autoSave = async () => {
       if (proxy && Object.keys(settings).length > 0) {
         setSaveStatus('saving')
         try {
-          proxy.defaultMeetingSettings = settings
+          // Combine standard settings with custom settings
+          const customSettings: Record<string, any> = {};
+          configOverrides
+            .filter(co => co.key.trim() && co.value.trim())
+            .forEach(co => {
+              // Convert value to appropriate type
+              let value: any = co.value;
+              if (co.value.toLowerCase() === 'true') value = true;
+              else if (co.value.toLowerCase() === 'false') value = false;
+              else if (!isNaN(Number(co.value)) && co.value.trim() !== '') value = Number(co.value);
+
+              customSettings[co.key] = value;
+            });
+
+          const combinedSettings = { ...settings, ...customSettings };
+          proxy.defaultMeetingSettings = combinedSettings;
           setSaveStatus('saved')
           // Clear the saved status after 2 seconds
           setTimeout(() => setSaveStatus('idle'), 2000)
@@ -94,7 +147,7 @@ export function SettingsPage() {
     // Debounce the auto-save to avoid excessive calls
     const timeoutId = setTimeout(autoSave, 300)
     return () => clearTimeout(timeoutId)
-  }, [settings, proxy])
+  }, [settings, proxy, configOverrides])
 
   const handleSettingChange = (key: keyof IMeetingSettings, value: any) => {
     setSettings(prev => ({
@@ -405,6 +458,84 @@ export function SettingsPage() {
           <Alert severity="info" sx={{ mt: 2 }}>
             Settings are automatically saved when you make changes. No manual save required.
           </Alert>
+        </CardContent>
+      </Card>
+
+      <Card sx={{ mt: 3 }}>
+        <CardContent>
+          <Stack direction="row" alignItems="center" spacing={0.5}>
+            <Typography variant="h6">
+              Custom Settings
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => setConfigOverridesExpanded(!configOverridesExpanded)}
+              sx={{
+                transition: 'transform 0.2s',
+                transform: configOverridesExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+              }}
+              title="Add custom settings for SETTINGS_PROVISIONING response"
+            >
+              <ExpandMore fontSize="small" />
+            </IconButton>
+          </Stack>
+
+          <Collapse in={configOverridesExpanded}>
+            <Box sx={{
+              mt: 1,
+              p: 2,
+              bgcolor: 'grey.50',
+              borderRadius: 1,
+              border: '1px solid',
+              borderColor: 'grey.200'
+            }}>
+              <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+                Add custom settings that will be included in the SETTINGS_PROVISIONING webhook response alongside the room settings above.
+              </Typography>
+
+              <Stack spacing={1}>
+                {configOverrides.map((override) => (
+                  <Stack key={override.id} direction="row" spacing={1} alignItems="center">
+                    <TextField
+                      size="small"
+                      label="Setting Key"
+                      value={override.key}
+                      onChange={(e) => updateConfigOverride(override.id, 'key', e.target.value)}
+                      placeholder="e.g. customFeatureEnabled"
+                      sx={{ flex: 1 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="Value"
+                      value={override.value}
+                      onChange={(e) => updateConfigOverride(override.id, 'value', e.target.value)}
+                      placeholder="e.g. true, false, or custom value"
+                      sx={{ flex: 1 }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => removeConfigOverride(override.id)}
+                      disabled={configOverrides.length === 1}
+                      sx={{ color: 'error.main' }}
+                      title="Remove this setting"
+                    >
+                      <RemoveIcon fontSize="small" />
+                    </IconButton>
+                  </Stack>
+                ))}
+
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={addConfigOverride}
+                  variant="outlined"
+                  sx={{ alignSelf: 'flex-start', mt: 1 }}
+                >
+                  Add Setting
+                </Button>
+              </Stack>
+            </Box>
+          </Collapse>
         </CardContent>
       </Card>
     </Box>
