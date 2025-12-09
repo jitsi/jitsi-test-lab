@@ -83,6 +83,17 @@ export function TokensPage() {
     const [configOverrides, setConfigOverrides] = useState<Array<{key: string, value: string, id: string}>>([
         { key: '', value: '', id: uuidv4() }
     ]);
+
+    // Custom permissions state
+    const [customPermissionsExpanded, setCustomPermissionsExpanded] = useState<boolean>(false);
+    const [customPermissions, setCustomPermissions] = useState<Array<{key: string, value: string, id: string}>>(() => {
+        try {
+            const saved = localStorage.getItem('custom-permissions');
+            return saved ? JSON.parse(saved) : [{ key: '', value: '', id: uuidv4() }];
+        } catch {
+            return [{ key: '', value: '', id: uuidv4() }];
+        }
+    });
     
     // JWT Permissions state
     const [permissions, setPermissions] = useState({
@@ -114,7 +125,22 @@ export function TokensPage() {
     };
     
     const updateConfigOverride = (id: string, field: 'key' | 'value', newValue: string) => {
-        setConfigOverrides(prev => prev.map(item => 
+        setConfigOverrides(prev => prev.map(item =>
+            item.id === id ? { ...item, [field]: newValue } : item
+        ));
+    };
+
+    // Custom permissions management functions
+    const addCustomPermission = () => {
+        setCustomPermissions(prev => [...prev, { key: '', value: '', id: uuidv4() }]);
+    };
+
+    const removeCustomPermission = (id: string) => {
+        setCustomPermissions(prev => prev.filter(item => item.id !== id));
+    };
+
+    const updateCustomPermission = (id: string, field: 'key' | 'value', newValue: string) => {
+        setCustomPermissions(prev => prev.map(item =>
             item.id === id ? { ...item, [field]: newValue } : item
         ));
     };
@@ -142,6 +168,19 @@ export function TokensPage() {
     // Create tokenOptions object from context state
     // For HS256, use tenant as keyId; for RS256 (JaaS), use kid
     const algorithm = config?.jwtAlgorithm || 'RS256';
+
+    // Combine predefined permissions with custom permissions
+    const allPermissions = { ...permissions };
+    customPermissions
+        .filter(cp => cp.key.trim() && cp.value.trim())
+        .forEach(cp => {
+            // Convert value to boolean if it's "true"/"false", otherwise keep as string
+            const value = cp.value.toLowerCase() === 'true' ? true :
+                         cp.value.toLowerCase() === 'false' ? false :
+                         cp.value;
+            allPermissions[cp.key] = value;
+        });
+
     const tokenOptions: TokenOptions = {
         displayName,
         exp: expiration,
@@ -152,7 +191,7 @@ export function TokensPage() {
         moderator,
         room: currentConference || '*',
         visitor,
-        permissions: permissions
+        permissions: allPermissions
     };
 
 
@@ -169,6 +208,15 @@ export function TokensPage() {
                 return generatedJwt;
         }
     };
+
+    // Save custom permissions to localStorage
+    useEffect(() => {
+        try {
+            localStorage.setItem('custom-permissions', JSON.stringify(customPermissions));
+        } catch (error) {
+            console.error('Failed to save custom permissions:', error);
+        }
+    }, [customPermissions]);
 
     // Re-generate token whenever options change (only when in generate mode)
     useEffect(() => {
@@ -201,7 +249,7 @@ export function TokensPage() {
         };
 
         generateTokenAsync();
-    }, [tokenMode, displayName, expiration, config?.kid, config?.tenant, config?.privateKey, config?.jwtSecret, config?.jwtAlgorithm, moderator, currentConference, visitor, permissions]);
+    }, [tokenMode, displayName, expiration, config?.kid, config?.tenant, config?.privateKey, config?.jwtSecret, config?.jwtAlgorithm, moderator, currentConference, visitor, permissions, customPermissions]);
 
 
     const copyToClipboard = async (text: string, successMessage: string) => {
@@ -275,7 +323,7 @@ export function TokensPage() {
         const validOverrides = configOverrides.filter(item => item.key.trim() && item.value.trim());
         const effectiveJwt = getEffectiveJwt();
         const tabTitle = `${displayName || 'User'} - ${roomName || 'test-room'}`;
-        
+
         const newTabId = addTab({
             title: tabTitle,
             jwt: effectiveJwt,
@@ -738,6 +786,83 @@ export function TokensPage() {
                                             </Tooltip>
                                         </Box>
                                     </FormGroup>
+                                </Box>
+                            </Collapse>
+                        </Box>
+
+                        {/* Custom Permissions Section */}
+                        <Box sx={{ mt: 2 }}>
+                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                <Typography variant="subtitle2">
+                                    Custom Permissions
+                                </Typography>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => setCustomPermissionsExpanded(!customPermissionsExpanded)}
+                                    sx={{
+                                        transition: 'transform 0.2s',
+                                        transform: customPermissionsExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                                    }}
+                                    title="Add custom JWT token permissions"
+                                >
+                                    <ExpandMore fontSize="small" />
+                                </IconButton>
+                            </Stack>
+
+                            <Collapse in={customPermissionsExpanded}>
+                                <Box sx={{
+                                    mt: 1,
+                                    p: 2,
+                                    bgcolor: 'grey.50',
+                                    borderRadius: 1,
+                                    border: '1px solid',
+                                    borderColor: 'grey.200'
+                                }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+                                        Add custom permissions to the JWT token. These will be included in the token's features object alongside the standard permissions above.
+                                    </Typography>
+
+                                    <Stack spacing={1}>
+                                        {customPermissions.map((permission) => (
+                                            <Stack key={permission.id} direction="row" spacing={1} alignItems="center">
+                                                <TextField
+                                                    size="small"
+                                                    label="Permission Key"
+                                                    value={permission.key}
+                                                    onChange={(e) => updateCustomPermission(permission.id, 'key', e.target.value)}
+                                                    placeholder="e.g. custom-feature"
+                                                    sx={{ flex: 1 }}
+                                                />
+                                                <TextField
+                                                    size="small"
+                                                    label="Value"
+                                                    value={permission.value}
+                                                    onChange={(e) => updateCustomPermission(permission.id, 'value', e.target.value)}
+                                                    placeholder="e.g. true, false, or custom value"
+                                                    sx={{ flex: 1 }}
+                                                />
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => removeCustomPermission(permission.id)}
+                                                    disabled={customPermissions.length === 1}
+                                                    sx={{ color: 'error.main' }}
+                                                    title="Remove this permission"
+                                                >
+                                                    <RemoveIcon fontSize="small" />
+                                                </IconButton>
+                                            </Stack>
+                                        ))}
+
+                                        <Button
+                                            size="small"
+                                            startIcon={<AddIcon />}
+                                            onClick={addCustomPermission}
+                                            variant="outlined"
+                                            sx={{ alignSelf: 'flex-start', mt: 1 }}
+                                        >
+                                            Add Permission
+                                        </Button>
+                                    </Stack>
                                 </Box>
                             </Collapse>
                         </Box>
