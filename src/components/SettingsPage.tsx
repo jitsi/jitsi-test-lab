@@ -114,7 +114,8 @@ export function SettingsPage() {
   // Auto-save whenever settings or config overrides change
   useEffect(() => {
     const autoSave = async () => {
-      if (proxy && Object.keys(settings).length > 0) {
+      const hasValidOverrides = configOverrides.some(co => co.key.trim() && co.value.trim())
+      if (proxy && (Object.keys(settings).length > 0 || hasValidOverrides)) {
         setSaveStatus('saving')
         try {
           // Combine standard settings with custom settings
