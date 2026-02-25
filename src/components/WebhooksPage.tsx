@@ -50,8 +50,6 @@ export function WebhooksPage() {
       )
     : logs
   
-  console.log('WebhooksPage: Current conference:', currentConference, 'Proxy:', !!proxy)
-
   useEffect(() => {
     if (!proxy || !isAutoRefresh) return
 
