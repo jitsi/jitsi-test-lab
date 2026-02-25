@@ -816,8 +816,11 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   // Token options state
   const [displayName, setDisplayName] = useState<string>('Test User')
   const [expiration, setExpiration] = useState<string>('24h')
-  const [moderator, setModerator] = useState<boolean>(false)
-  const [visitor, setVisitor] = useState<boolean>(false)
+  const [moderator, setModerator] = useState<boolean>(() => localStorage.getItem('participants-moderator') === 'true')
+  const [visitor, setVisitor] = useState<boolean>(() => localStorage.getItem('participants-visitor') === 'true')
+
+  useEffect(() => { localStorage.setItem('participants-moderator', String(moderator)) }, [moderator])
+  useEffect(() => { localStorage.setItem('participants-visitor', String(visitor)) }, [visitor])
 
   console.log('AppProvider: Current state:', {
     configLoaded: !!config,
