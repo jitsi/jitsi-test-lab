@@ -114,20 +114,11 @@ export function WebhooksPage() {
   }
 
   return (
-    <Box 
-      sx={{ 
-        maxWidth: 1200, 
-        mx: 'auto', 
-        height: '100vh', 
-        display: 'flex',
-        flexDirection: 'column',
-        p: 3
-      }}
-    >
-      <Stack spacing={3} sx={{ flex: 1, overflow: 'hidden' }}>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', p: 3 }}>
+      <Stack spacing={3}>
         {/* Webhook Log Section */}
-        <Card sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Card>
+          <CardContent>
             <Stack 
               direction="row" 
               alignItems="center" 
@@ -209,7 +200,7 @@ export function WebhooksPage() {
               </Stack>
             </Stack>
             
-            <Collapse in={webhookLogExpanded} sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <Collapse in={webhookLogExpanded}>
               {/* Filter Input */}
               <TextField
                 label="Filter webhook events"
@@ -232,7 +223,7 @@ export function WebhooksPage() {
                 }}
               />
               
-              <Paper variant="outlined" sx={{ flex: 1, overflow: 'auto', bgcolor: '#fafafa', minHeight: 0 }}>
+              <Paper variant="outlined" sx={{ maxHeight: 'calc(100vh - 320px)', minHeight: 200, overflow: 'auto', bgcolor: '#fafafa' }}>
                 {filteredLogs.length === 0 ? (
                   <Box sx={{ p: 3, textAlign: 'center' }}>
                     <Typography color="text.secondary">

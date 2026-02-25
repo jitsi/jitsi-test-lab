@@ -124,6 +124,11 @@ export function JaaSConfigPage() {
         updatedConfigs[configIndex] = {
             ...updatedConfigs[configIndex],
             ...editingConfig,
+            // Deep-merge webhooksProxy so editing one field doesn't clear the other
+            webhooksProxy: {
+                ...updatedConfigs[configIndex].webhooksProxy,
+                ...editingConfig.webhooksProxy
+            },
             // Ensure name is included if it was edited
             name: editingConfig.name || updatedConfigs[configIndex].name
         };
