@@ -96,20 +96,28 @@ export function TokensPage() {
     });
     
     // JWT Permissions state
-    const [permissions, setPermissions] = useState({
-        livestreaming: false,
-        recording: false,
-        transcription: false,
-        'sip-inbound-call': false,
-        'sip-outbound-call': false,
-        'inbound-call': false,
-        'outbound-call': false,
-        'file-upload': false,
-        'list-visitors': false,
-        'send-groupchat': false,
-        'create-polls': false,
-        'hidden-from-recorder': false,
-        'name-readonly': false
+    const [permissions, setPermissions] = useState(() => {
+        const defaults = {
+            livestreaming: false,
+            recording: false,
+            transcription: false,
+            'sip-inbound-call': false,
+            'sip-outbound-call': false,
+            'inbound-call': false,
+            'outbound-call': false,
+            'file-upload': false,
+            'list-visitors': false,
+            'send-groupchat': false,
+            'create-polls': false,
+            'hidden-from-recorder': false,
+            'name-readonly': false
+        };
+        try {
+            const saved = localStorage.getItem('participants-permissions');
+            return saved ? { ...defaults, ...JSON.parse(saved) } : defaults;
+        } catch {
+            return defaults;
+        }
     });
     
     const handlePermissionChange = (permission: string, checked: boolean) => {
@@ -217,6 +225,15 @@ export function TokensPage() {
             console.error('Failed to save custom permissions:', error);
         }
     }, [customPermissions]);
+
+    // Save permissions to localStorage
+    useEffect(() => {
+        try {
+            localStorage.setItem('participants-permissions', JSON.stringify(permissions));
+        } catch (error) {
+            console.error('Failed to save permissions:', error);
+        }
+    }, [permissions]);
 
     // Re-generate token whenever options change (only when in generate mode)
     useEffect(() => {
