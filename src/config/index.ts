@@ -22,6 +22,7 @@ export interface ConfigPreset {
   privateKey?: string;
   jwtAlgorithm?: 'RS256' | 'HS256';
   jwtSecret?: string;
+  developmentMode?: boolean;
   webhooksProxy?: {
     url: string;
     sharedSecret: string;
