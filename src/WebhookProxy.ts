@@ -24,6 +24,11 @@ class WebhookProxy {
     private logs: WebhookLogEntry[] = [];
     private isConnecting: boolean = false;
     private isConnected: boolean = false;
+    private heartbeatInterval: ReturnType<typeof setInterval> | undefined;
+    private reconnectTimeout: ReturnType<typeof setTimeout> | undefined;
+    private intentionalDisconnect: boolean = false;
+    private static readonly HEARTBEAT_INTERVAL_MS = 30000;
+    private static readonly RECONNECT_DELAY_MS = 3000;
 
     constructor(url: string, secret: string, conferenceName: string, tenant: string) {
         this.url = url;
@@ -53,7 +58,8 @@ class WebhookProxy {
             console.log(`⚠️ WebhookProxy for ${this.conferenceName} already connecting/connected`);
             return;
         }
-        
+
+        this.intentionalDisconnect = false;
         this.isConnecting = true;
         
         // Connect directly to remote proxy server with secret parameter
@@ -74,7 +80,14 @@ class WebhookProxy {
             this.logInfo('connected', { type: 'direct_proxy' });
             this.isConnecting = false;
             this.isConnected = true;
-            
+
+            // Start heartbeat to keep connection alive
+            this.heartbeatInterval = setInterval(() => {
+                if (this.ws?.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({ type: 'ping' }));
+                }
+            }, WebhookProxy.HEARTBEAT_INTERVAL_MS);
+
             // Subscribe to room events after connection is established
             this.subscribeToRoom();
         };
@@ -84,6 +97,13 @@ class WebhookProxy {
             this.logInfo('websocket_closed', { reason: 'connection_closed' });
             this.isConnecting = false;
             this.isConnected = false;
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = undefined;
+
+            if (!this.intentionalDisconnect) {
+                this.logInfo('reconnecting', { delay: WebhookProxy.RECONNECT_DELAY_MS });
+                this.reconnectTimeout = setTimeout(() => this.connect(), WebhookProxy.RECONNECT_DELAY_MS);
+            }
         };
 
         this.ws.onmessage = async (event) => {
@@ -201,6 +221,11 @@ class WebhookProxy {
     }
 
     disconnect() {
+        this.intentionalDisconnect = true;
+        clearInterval(this.heartbeatInterval);
+        this.heartbeatInterval = undefined;
+        clearTimeout(this.reconnectTimeout);
+        this.reconnectTimeout = undefined;
         if (this.ws) {
             this.ws.close();
             console.log('WebhookProxy disconnected');
