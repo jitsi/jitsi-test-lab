@@ -4,6 +4,14 @@ import { v4 as uuidv4 } from 'uuid';
 export interface TokenOptions {
     displayName?: string;
     /**
+     * The user's email address to include in the token.
+     */
+    email?: string;
+    /**
+     * The URL of the user's avatar image.
+     */
+    avatarUrl?: string;
+    /**
      * The duration for which the token is valid, e.g. "1h" for one hour.
      */
     exp?: string;
@@ -114,8 +122,8 @@ export function generatePayload(options: TokenOptions): any {
             'user': {
                 'name': options.displayName || '',
                 'id': uuidv4(),
-                'avatar': 'https://avatars0.githubusercontent.com/u/3671647',
-                'email': 'john.doe@jitsi.org'
+                'avatar': options.avatarUrl || '',
+                'email': options.email || ''
             },
             'group': uuidv4(),
             'features': features,

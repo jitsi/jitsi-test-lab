@@ -44,6 +44,8 @@ export function TokensPage() {
         audioSetting, setAudioSetting,
         videoSetting, setVideoSetting,
         displayName, setDisplayName,
+        email, setEmail,
+        avatarUrl, setAvatarUrl,
         expiration, setExpiration,
         moderator, setModerator,
         visitor, setVisitor
@@ -191,6 +193,8 @@ export function TokensPage() {
 
     const tokenOptions: TokenOptions = {
         displayName,
+        email,
+        avatarUrl,
         exp: expiration,
         keyId: algorithm === 'HS256' ? (config?.tenant || '') : (config?.kid || ''),
         privateKey: config?.privateKey,
@@ -266,7 +270,7 @@ export function TokensPage() {
         };
 
         generateTokenAsync();
-    }, [tokenMode, displayName, expiration, config?.kid, config?.tenant, config?.privateKey, config?.jwtSecret, config?.jwtAlgorithm, moderator, currentConference, visitor, permissions, customPermissions]);
+    }, [tokenMode, displayName, email, avatarUrl, expiration, config?.kid, config?.tenant, config?.privateKey, config?.jwtSecret, config?.jwtAlgorithm, moderator, currentConference, visitor, permissions, customPermissions]);
 
 
     const copyToClipboard = async (text: string, successMessage: string) => {
@@ -540,6 +544,22 @@ export function TokensPage() {
                                 label="Display Name"
                                 value={displayName}
                                 onChange={(e) => setDisplayName(e.target.value)}
+                                sx={{ flex: 1 }}
+                            />
+                            <TextField
+                                label="Email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="user@example.com"
+                                sx={{ flex: 1 }}
+                            />
+                        </Stack>
+                        <Stack direction="row" spacing={2}>
+                            <TextField
+                                label="Avatar URL"
+                                value={avatarUrl}
+                                onChange={(e) => setAvatarUrl(e.target.value)}
+                                placeholder="https://example.com/avatar.png"
                                 sx={{ flex: 1 }}
                             />
                             <TextField
