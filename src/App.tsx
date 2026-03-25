@@ -76,6 +76,10 @@ interface AppContextType {
   // Token options state
   displayName: string;
   setDisplayName: (value: string) => void;
+  email: string;
+  setEmail: (value: string) => void;
+  avatarUrl: string;
+  setAvatarUrl: (value: string) => void;
   expiration: string;
   setExpiration: (value: string) => void;
   moderator: boolean;
@@ -815,6 +819,8 @@ function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Token options state
   const [displayName, setDisplayName] = useState<string>('Test User')
+  const [email, setEmail] = useState<string>('')
+  const [avatarUrl, setAvatarUrl] = useState<string>('')
   const [expiration, setExpiration] = useState<string>('24h')
   const [moderator, setModerator] = useState<boolean>(() => localStorage.getItem('participants-moderator') === 'true')
   const [visitor, setVisitor] = useState<boolean>(() => localStorage.getItem('participants-visitor') === 'true')
@@ -1056,6 +1062,10 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     // Token options
     displayName,
     setDisplayName,
+    email,
+    setEmail,
+    avatarUrl,
+    setAvatarUrl,
     expiration,
     setExpiration,
     moderator,
