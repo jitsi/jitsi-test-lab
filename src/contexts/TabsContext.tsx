@@ -244,6 +244,10 @@ export const TabsProvider: React.FC<TabsProviderProps> = ({ children }) => {
             newApis.set(tabId, api);
             return newApis;
         });
+        // Expose APIs on window for browser console access
+        (window as any).jitsiApis = (window as any).jitsiApis || {};
+        (window as any).jitsiApis[tabId] = api;
+        (window as any).jitsiApi = api; // always points to the most recently registered tab
     }, []);
 
     const unregisterTabApi = useCallback((tabId: string) => {
@@ -252,6 +256,12 @@ export const TabsProvider: React.FC<TabsProviderProps> = ({ children }) => {
             newApis.delete(tabId);
             return newApis;
         });
+        if ((window as any).jitsiApis) {
+            delete (window as any).jitsiApis[tabId];
+            // Update jitsiApi shortcut to another active tab if available
+            const remaining = Object.values((window as any).jitsiApis);
+            (window as any).jitsiApi = remaining.length > 0 ? remaining[remaining.length - 1] : null;
+        }
     }, []);
 
     const getTabApi = useCallback((tabId: string) => {
