@@ -812,10 +812,14 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   // Join options state
-  const [prejoinScreen, setPrejoinScreen] = useState<'default' | 'on' | 'off'>('default')
-  const [p2pSetting, setP2pSetting] = useState<'default' | 'on' | 'off'>('default')
-  const [audioSetting, setAudioSetting] = useState<'default' | 'on' | 'off'>('default')
-  const [videoSetting, setVideoSetting] = useState<'default' | 'on' | 'off'>('default')
+  const [prejoinScreen, setPrejoinScreen] = useState<'default' | 'on' | 'off'>(
+    () => (localStorage.getItem('participants-prejoin') as 'default' | 'on' | 'off') || 'default')
+  const [p2pSetting, setP2pSetting] = useState<'default' | 'on' | 'off'>(
+    () => (localStorage.getItem('participants-p2p') as 'default' | 'on' | 'off') || 'default')
+  const [audioSetting, setAudioSetting] = useState<'default' | 'on' | 'off'>(
+    () => (localStorage.getItem('participants-audio') as 'default' | 'on' | 'off') || 'default')
+  const [videoSetting, setVideoSetting] = useState<'default' | 'on' | 'off'>(
+    () => (localStorage.getItem('participants-video') as 'default' | 'on' | 'off') || 'default')
 
   // Token options state
   const [displayName, setDisplayName] = useState<string>('Test User')
@@ -825,6 +829,10 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   const [moderator, setModerator] = useState<boolean>(() => localStorage.getItem('participants-moderator') === 'true')
   const [visitor, setVisitor] = useState<boolean>(() => localStorage.getItem('participants-visitor') === 'true')
 
+  useEffect(() => { localStorage.setItem('participants-prejoin', prejoinScreen) }, [prejoinScreen])
+  useEffect(() => { localStorage.setItem('participants-p2p', p2pSetting) }, [p2pSetting])
+  useEffect(() => { localStorage.setItem('participants-audio', audioSetting) }, [audioSetting])
+  useEffect(() => { localStorage.setItem('participants-video', videoSetting) }, [videoSetting])
   useEffect(() => { localStorage.setItem('participants-moderator', String(moderator)) }, [moderator])
   useEffect(() => { localStorage.setItem('participants-visitor', String(visitor)) }, [visitor])
 
