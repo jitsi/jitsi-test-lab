@@ -126,7 +126,7 @@ export function generatePayload(options: TokenOptions): any {
                 'email': options.email || ''
             },
             'group': uuidv4(),
-            'features': features,
+            ...(Object.keys(features).length > 0 && { 'features': features }),
         },
         'room': options.room || '*'
     };
