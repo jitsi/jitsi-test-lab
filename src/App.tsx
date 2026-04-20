@@ -972,15 +972,15 @@ function AppProvider({ children }: { children: React.ReactNode }) {
           const defaultProxy = WebhookProxy.getInstance(
             activeConfig.webhooksProxy.url,
             activeConfig.webhooksProxy.sharedSecret,
-            'test-room',
+            currentConference,
             activeConfig.tenant
           )
 
           // Connect directly to remote proxy server
           defaultProxy.connect()
 
-          newConferences.set('test-room', {
-            name: 'test-room',
+          newConferences.set(currentConference, {
+            name: currentConference,
             proxy: defaultProxy
           })
         }
