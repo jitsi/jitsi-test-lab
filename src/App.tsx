@@ -807,7 +807,8 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   console.log('AppProvider: Component rendering')
   const [config, setConfig] = useState<Config | null>(null)
   const [conferences, setConferences] = useState<Map<string, ConferenceState>>(new Map())
-  const [currentConference, setCurrentConference] = useState<string>('test-room')
+  const [currentConference, setCurrentConference] = useState<string>(
+    () => localStorage.getItem('current-conference') || 'test-room')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -829,6 +830,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   const [moderator, setModerator] = useState<boolean>(() => localStorage.getItem('participants-moderator') === 'true')
   const [visitor, setVisitor] = useState<boolean>(() => localStorage.getItem('participants-visitor') === 'true')
 
+  useEffect(() => { localStorage.setItem('current-conference', currentConference) }, [currentConference])
   useEffect(() => { localStorage.setItem('participants-prejoin', prejoinScreen) }, [prejoinScreen])
   useEffect(() => { localStorage.setItem('participants-p2p', p2pSetting) }, [p2pSetting])
   useEffect(() => { localStorage.setItem('participants-audio', audioSetting) }, [audioSetting])

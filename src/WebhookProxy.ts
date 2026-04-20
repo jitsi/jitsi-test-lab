@@ -265,9 +265,22 @@ class WebhookProxy {
     set defaultMeetingSettings(value: IMeetingSettings) {
         console.log('Default meeting settings set to:', value);
         this._defaultMeetingSettings = value;
+        try {
+            localStorage.setItem(`meeting-settings-${this.conferenceName}`, JSON.stringify(value));
+        } catch {
+            // ignore
+        }
     }
 
     get defaultMeetingSettings(): IMeetingSettings | undefined {
+        if (!this._defaultMeetingSettings) {
+            try {
+                const saved = localStorage.getItem(`meeting-settings-${this.conferenceName}`);
+                if (saved) this._defaultMeetingSettings = JSON.parse(saved);
+            } catch {
+                // ignore
+            }
+        }
         return this._defaultMeetingSettings;
     }
 
