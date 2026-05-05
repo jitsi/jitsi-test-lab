@@ -823,8 +823,10 @@ function AppProvider({ children }: { children: React.ReactNode }) {
     () => (localStorage.getItem('participants-video') as 'default' | 'on' | 'off') || 'default')
 
   // Token options state
-  const [displayName, setDisplayName] = useState<string>('Test User')
-  const [email, setEmail] = useState<string>('')
+  const [displayName, setDisplayName] = useState<string>(
+    () => localStorage.getItem('participants-display-name') || 'Test User')
+  const [email, setEmail] = useState<string>(
+    () => localStorage.getItem('participants-email') || '')
   const [avatarUrl, setAvatarUrl] = useState<string>('')
   const [expiration, setExpiration] = useState<string>('24h')
   const [moderator, setModerator] = useState<boolean>(() => localStorage.getItem('participants-moderator') === 'true')
@@ -837,6 +839,8 @@ function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { localStorage.setItem('participants-video', videoSetting) }, [videoSetting])
   useEffect(() => { localStorage.setItem('participants-moderator', String(moderator)) }, [moderator])
   useEffect(() => { localStorage.setItem('participants-visitor', String(visitor)) }, [visitor])
+  useEffect(() => { localStorage.setItem('participants-display-name', displayName) }, [displayName])
+  useEffect(() => { localStorage.setItem('participants-email', email) }, [email])
 
   console.log('AppProvider: Current state:', {
     configLoaded: !!config,
