@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 .vite/*
+
+# Local config (may contain private keys)
+public/config.json
