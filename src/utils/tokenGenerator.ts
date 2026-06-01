@@ -51,6 +51,11 @@ export interface TokenOptions {
      * JWT permissions for JaaS features.
      */
     permissions?: Record<string, boolean>;
+    /**
+     * Custom fields to set in the token payload, using dot-notation paths.
+     * E.g. [{ path: 'room', value: 'myroom' }, { path: 'context.room.regexp', value: 'true' }]
+     */
+    customFields?: Array<{ path: string; value: string }>;
 }
 
 export interface Token {
@@ -70,6 +75,24 @@ export interface Token {
      * The token's payload, for easy reference.
      */
     payload: any;
+}
+
+function setNestedPath(obj: any, path: string, value: string): void {
+    let parsed: any;
+    try {
+        parsed = JSON.parse(value);
+    } catch {
+        parsed = value;
+    }
+    const parts = path.split('.');
+    let cur = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+        if (cur[parts[i]] === undefined || typeof cur[parts[i]] !== 'object') {
+            cur[parts[i]] = {};
+        }
+        cur = cur[parts[i]];
+    }
+    cur[parts[parts.length - 1]] = parsed;
 }
 
 function parseExpiration(exp: string): number {
@@ -145,6 +168,15 @@ export function generatePayload(options: TokenOptions): any {
     // Handle admin permission at root level
     if (options.permissions?.admin) {
         (payload as any).admin = true; // eslint-disable-line @typescript-eslint/no-explicit-any
+    }
+
+    // Apply custom fields (dot-notation paths)
+    if (options.customFields) {
+        for (const { path, value } of options.customFields) {
+            if (path.trim() && value.trim()) {
+                setNestedPath(payload, path.trim(), value.trim());
+            }
+        }
     }
 
     return payload;

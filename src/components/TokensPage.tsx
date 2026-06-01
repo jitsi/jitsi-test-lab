@@ -86,6 +86,17 @@ export function TokensPage() {
         { key: '', value: '', id: uuidv4() }
     ]);
 
+    // Custom JWT fields state
+    const [customFieldsExpanded, setCustomFieldsExpanded] = useState<boolean>(false);
+    const [customFields, setCustomFields] = useState<Array<{path: string, value: string, id: string}>>(() => {
+        try {
+            const saved = localStorage.getItem('custom-jwt-fields');
+            return saved ? JSON.parse(saved) : [{ path: '', value: '', id: uuidv4() }];
+        } catch {
+            return [{ path: '', value: '', id: uuidv4() }];
+        }
+    });
+
     // Custom permissions state
     const [customPermissionsExpanded, setCustomPermissionsExpanded] = useState<boolean>(false);
     const [customPermissions, setCustomPermissions] = useState<Array<{key: string, value: string, id: string}>>(() => {
@@ -136,6 +147,21 @@ export function TokensPage() {
     
     const updateConfigOverride = (id: string, field: 'key' | 'value', newValue: string) => {
         setConfigOverrides(prev => prev.map(item =>
+            item.id === id ? { ...item, [field]: newValue } : item
+        ));
+    };
+
+    // Custom JWT fields management functions
+    const addCustomField = () => {
+        setCustomFields(prev => [...prev, { path: '', value: '', id: uuidv4() }]);
+    };
+
+    const removeCustomField = (id: string) => {
+        setCustomFields(prev => prev.filter(item => item.id !== id));
+    };
+
+    const updateCustomField = (id: string, field: 'path' | 'value', newValue: string) => {
+        setCustomFields(prev => prev.map(item =>
             item.id === id ? { ...item, [field]: newValue } : item
         ));
     };
@@ -203,7 +229,8 @@ export function TokensPage() {
         moderator,
         room: currentConference || '*',
         visitor,
-        permissions: allPermissions
+        permissions: allPermissions,
+        customFields: customFields.filter(f => f.path.trim() && f.value.trim()).map(({ path, value }) => ({ path, value }))
     };
 
 
@@ -220,6 +247,15 @@ export function TokensPage() {
                 return generatedJwt;
         }
     };
+
+    // Save custom JWT fields to localStorage
+    useEffect(() => {
+        try {
+            localStorage.setItem('custom-jwt-fields', JSON.stringify(customFields));
+        } catch (error) {
+            console.error('Failed to save custom JWT fields:', error);
+        }
+    }, [customFields]);
 
     // Save custom permissions to localStorage
     useEffect(() => {
@@ -270,7 +306,7 @@ export function TokensPage() {
         };
 
         generateTokenAsync();
-    }, [tokenMode, displayName, email, avatarUrl, expiration, config?.kid, config?.tenant, config?.privateKey, config?.jwtSecret, config?.jwtAlgorithm, moderator, currentConference, visitor, permissions, customPermissions]);
+    }, [tokenMode, displayName, email, avatarUrl, expiration, config?.kid, config?.tenant, config?.privateKey, config?.jwtSecret, config?.jwtAlgorithm, moderator, currentConference, visitor, permissions, customPermissions, customFields]);
 
 
     const copyToClipboard = async (text: string, successMessage: string) => {
@@ -823,6 +859,83 @@ export function TokensPage() {
                                             </Tooltip>
                                         </Box>
                                     </FormGroup>
+                                </Box>
+                            </Collapse>
+                        </Box>
+
+                        {/* Custom JWT Fields Section */}
+                        <Box sx={{ mt: 2 }}>
+                            <Stack direction="row" alignItems="center" spacing={0.5}>
+                                <Typography variant="subtitle2">
+                                    Custom JWT Fields
+                                </Typography>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => setCustomFieldsExpanded(!customFieldsExpanded)}
+                                    sx={{
+                                        transition: 'transform 0.2s',
+                                        transform: customFieldsExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+                                    }}
+                                    title="Add custom fields to the JWT payload"
+                                >
+                                    <ExpandMore fontSize="small" />
+                                </IconButton>
+                            </Stack>
+
+                            <Collapse in={customFieldsExpanded}>
+                                <Box sx={{
+                                    mt: 1,
+                                    p: 2,
+                                    bgcolor: 'grey.50',
+                                    borderRadius: 1,
+                                    border: '1px solid',
+                                    borderColor: 'grey.200'
+                                }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+                                        Set arbitrary fields in the JWT payload using dot-notation paths. Values are parsed as JSON (booleans, numbers, objects) or kept as strings. E.g. path <code>context.room.regexp</code> = <code>true</code>, or top-level <code>room</code> = <code>"myroom"</code>.
+                                    </Typography>
+
+                                    <Stack spacing={1}>
+                                        {customFields.map((field) => (
+                                            <Stack key={field.id} direction="row" spacing={1} alignItems="center">
+                                                <TextField
+                                                    size="small"
+                                                    label="Path"
+                                                    value={field.path}
+                                                    onChange={(e) => updateCustomField(field.id, 'path', e.target.value)}
+                                                    placeholder="e.g. context.room.regexp"
+                                                    sx={{ flex: 1 }}
+                                                />
+                                                <TextField
+                                                    size="small"
+                                                    label="Value"
+                                                    value={field.value}
+                                                    onChange={(e) => updateCustomField(field.id, 'value', e.target.value)}
+                                                    placeholder="e.g. true"
+                                                    sx={{ flex: 1 }}
+                                                />
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => removeCustomField(field.id)}
+                                                    disabled={customFields.length === 1}
+                                                    sx={{ color: 'error.main' }}
+                                                    title="Remove this field"
+                                                >
+                                                    <RemoveIcon fontSize="small" />
+                                                </IconButton>
+                                            </Stack>
+                                        ))}
+
+                                        <Button
+                                            size="small"
+                                            startIcon={<AddIcon />}
+                                            onClick={addCustomField}
+                                            variant="outlined"
+                                            sx={{ alignSelf: 'flex-start', mt: 1 }}
+                                        >
+                                            Add Field
+                                        </Button>
+                                    </Stack>
                                 </Box>
                             </Collapse>
                         </Box>
