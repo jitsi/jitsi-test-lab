@@ -1,11 +1,4 @@
 import { useState, useEffect } from 'react'
-
-// Extend window to include our timeout
-declare global {
-  interface Window {
-    roomSwitchTimeout?: NodeJS.Timeout;
-  }
-}
 import {
   Box,
   Card,
@@ -51,7 +44,7 @@ export function SettingsPage() {
   const { getCurrentProxy, currentConference, setCurrentConference, addConference, config } = useAppContext()
   const [settings, setSettings] = useState<IMeetingSettings>({})
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [newRoomName, setNewRoomName] = useState('')
+  const [newRoomName, setNewRoomName] = useState(currentConference)
   const [roomNameError, setRoomNameError] = useState('')
   const [configOverridesExpanded, setConfigOverridesExpanded] = useState<boolean>(false)
 
@@ -96,20 +89,12 @@ export function SettingsPage() {
     ))
   }
 
-  // Clear the new room name field when currentConference changes (to show it was successful)
+  // Keep the room name field in sync with the current conference (e.g. when it
+  // changes elsewhere or after a successful switch).
   useEffect(() => {
-    setNewRoomName('')
+    setNewRoomName(currentConference)
     setRoomNameError('')
   }, [currentConference])
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (window.roomSwitchTimeout) {
-        clearTimeout(window.roomSwitchTimeout)
-      }
-    }
-  }, [])
 
   // Auto-save whenever settings or config overrides change
   useEffect(() => {
@@ -158,36 +143,35 @@ export function SettingsPage() {
   }
 
   const handleCreateRoom = (roomName?: string) => {
-    const targetRoomName = roomName || newRoomName.trim()
+    const targetRoomName = (roomName ?? newRoomName).trim()
     console.log('Creating room:', targetRoomName, 'Current room:', currentConference)
-    
+
     if (!targetRoomName) {
       setRoomNameError('Room name cannot be empty')
       return
     }
-    
+
+    // Nothing to do if the name is unchanged.
     if (targetRoomName === currentConference) {
-      setRoomNameError('Room already exists and is current')
+      setRoomNameError('')
       return
     }
 
     try {
-      // Add the new conference (this will create a new proxy and auto-switch)
-      console.log('Adding conference:', targetRoomName)
+      // Add/switch the conference (this also sets it as the current conference,
+      // which syncs the input field via the effect above).
+      console.log('Switching to conference:', targetRoomName)
       addConference(targetRoomName)
-      
-      // Clear the input and error
-      setNewRoomName('')
       setRoomNameError('')
-      
+
       // Show success message
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus('idle'), 2000)
-      
-      console.log('Room creation completed successfully')
+
+      console.log('Room switch completed successfully')
     } catch (error) {
-      console.error('Failed to create room:', error)
-      setRoomNameError('Failed to create room. Please try again.')
+      console.error('Failed to switch room:', error)
+      setRoomNameError('Failed to switch room. Please try again.')
     }
   }
 
@@ -261,30 +245,20 @@ export function SettingsPage() {
 
           <TextField
             label="Room Name"
-            value={newRoomName || currentConference || ''}
+            value={newRoomName}
             onChange={(e) => {
-              const inputValue = e.target.value
-              const roomName = inputValue.trim()
-              setNewRoomName(inputValue)
+              setNewRoomName(e.target.value)
               setRoomNameError('')
-              
-              // Auto-switch when user types a valid room name that's different from current
-              if (roomName && roomName !== currentConference) {
-                // Debounce the room creation
-                clearTimeout(window.roomSwitchTimeout)
-                window.roomSwitchTimeout = setTimeout(() => {
-                  handleCreateRoom(roomName)
-                }, 500) // Wait 500ms after user stops typing
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleCreateRoom()
               }
             }}
-            onFocus={(e) => {
-              // If the field shows the current room name, clear it when focused to allow easy editing
-              if (!newRoomName && currentConference) {
-                setNewRoomName('')
-              }
-            }}
+            onBlur={() => handleCreateRoom()}
             error={!!roomNameError}
-            helperText={roomNameError || 'Shows current room name. Type a new name to switch rooms automatically.'}
+            helperText={roomNameError || 'Shows current room name. Type a new name and press Enter to switch rooms.'}
             fullWidth
           />
         </CardContent>

@@ -1014,17 +1014,15 @@ function AppProvider({ children }: { children: React.ReactNode }) {
 
   const handleAddConference = (name: string) => {
     console.log('handleAddConference called with:', name, 'exists:', conferences.has(name), 'config:', !!config)
-    if (!conferences.has(name) && config) {
+
+    // Create a webhook proxy for the new conference if one doesn't exist yet and
+    // webhooks are configured. Room switching works regardless of webhook config.
+    if (!conferences.has(name) && config?.webhooksProxy?.url && config?.webhooksProxy?.sharedSecret) {
       // Disconnect the current proxy immediately before creating new one
       const currentProxy = getCurrentProxy()
       if (currentProxy) {
         console.log('Disconnecting current proxy for:', currentConference)
         currentProxy.disconnect()
-      }
-
-      if (!config.webhooksProxy?.url || !config.webhooksProxy?.sharedSecret) {
-        console.warn('Cannot create conference: webhooksProxy not configured')
-        return
       }
 
       const newProxy = WebhookProxy.getInstance(
@@ -1044,11 +1042,11 @@ function AppProvider({ children }: { children: React.ReactNode }) {
       })
       console.log('Adding conference to map:', name, 'New conferences:', Array.from(newConferences.keys()))
       setConferences(newConferences)
-
-      // Automatically set as current conference after adding
-      console.log('Auto-switching to new conference:', name)
-      setCurrentConference(name)
     }
+
+    // Always switch to the requested conference, even without a webhook proxy.
+    console.log('Switching to conference:', name)
+    setCurrentConference(name)
   }
 
   const getCurrentProxy = () => {
